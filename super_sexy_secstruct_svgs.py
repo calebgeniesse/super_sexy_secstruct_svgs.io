@@ -2,7 +2,8 @@ import svgwrite
 
 import stem
 from stem import Stem
-from util import get_stems, flatten, consecutive_segments
+from canvas import Canvas
+from util import get_stems, flatten, consecutive_segments, color
 
 # General theory:
 #
@@ -17,41 +18,6 @@ from util import get_stems, flatten, consecutive_segments
 # Stems have a position and orientation relative to the 'root stem' (at the moment, just
 # stem 0; at the moment, the position and orientation *cannot* vary). So we can compute
 # 'stem internal coordinates' -- trivial -- then transform them.
-
-stem_offset_width = 80
-bp_offset_width = 30
-bp_offset_height = 20
-
-def color(nt):
-	if nt == 'a': return 'yellow'
-	if nt == 'c': return 'green'
-	if nt == 'g': return 'red'
-	if nt == 'u': return 'blue'
-	
-	print "WARNING: unrecognized nucleotide."
-
-def draw_stems(stems, dwg):
-	# draw basepairs
-	# SOON: stem_idx won't matter because we'll have a smart canvas.
-	for stem_idx, stem in enumerate(stems):
-		print  stem_idx, stem.sequence
-		x_offset = stem_idx * stem_offset_width
-		for bp_idx, [bp1, bp2] in enumerate(stem.base_pairs): 
-			# need to compute some offet? ...
-			y_offset = bp_idx * bp_offset_height
-			dwg.add(dwg.line((x_offset + 10, y_offset), (x_offset + 20, y_offset), 
-					stroke=svgwrite.rgb(10, 10, 16, '%')))
-			dwg.add(dwg.text(bp1, insert=(x_offset+0, y_offset), fill=color(bp1)))#'blue'))
-			dwg.add(dwg.text(bp2, insert=(x_offset+bp_offset_width, y_offset), fill=color(bp2)))#'yellow'))
-
-			# numbers if multiple of 5
-			# TODO: adjust size
-			num1, num2 = stem.numbers[bp_idx]
-			if num1 % 5 == 0: dwg.add(dwg.text(num1, insert=(x_offset+(-10), y_offset+5), fill=color(bp1)))#'blue'))
-			if num2 % 5 == 0: dwg.add(dwg.text(num2, insert=(x_offset+30+(10), y_offset+5), fill=color(bp2)))#'blue'))
-
-
-	return dwg
 
 def apicals( stems, loops ):
 	"""
@@ -90,52 +56,26 @@ def junctions( stems, loops ):
 	print junctions
 	return junctions
 
-def draw_apical_loop_reasonably_with_respect_to_stem( apical_loop, stem_idx, stem, seq, dwg ): 
-	"""
-	In a better world, this stem would have attached coordinates.
-	Instead I'm just passing its stem_idx and computing the offset.
-	"""
-	for loop_idx, loop_nt in enumerate(apical_loop):
-		x_offset = stem_idx * stem_offset_width + loop_idx * 8
-		# This would come out of stem length
-		y_offset = len(stem.base_pairs) * bp_offset_height + 10
-		dwg.add(dwg.text(seq[loop_nt-1], insert=(x_offset, y_offset), fill=color(seq[loop_nt-1])))#'blue'))
-	return dwg
-
-def draw_junction_loop_reasonably_with_respect_to_stems( junction_loop, stem1_idx, stem1, stem2_idx, stem2, seq, dwg ):
-	#y1 = 0 - 10
-	#y2 = 0 - 10
-	x1 = stem1_idx * stem_offset_width + bp_offset_width
-	x2 = stem2_idx * stem_offset_width
-	for loop_idx, loop_nt in enumerate(junction_loop):
-		print stem1_idx, stem2_idx, stem_offset_width,  bp_offset_width
-		fraction_done_with_loop = float(loop_idx) / float(len( junction_loop ))
-		print fraction_done_with_loop
-		print (x1+(float(x2-x1)* fraction_done_with_loop ) )
-		dwg.add(dwg.text(seq[loop_nt-1], insert=((x1+(float(x2-x1)* fraction_done_with_loop ) ), -10 ), fill=color(seq[loop_nt-1])))#'blue'))
-	return dwg
-
 def draw_secstruct(stems, loops, seq, file_name='default.svg'):
 	# init drawing
 	dwg = svgwrite.Drawing(file_name)
 
-	# determine stem coordinates and orientation
-		
-	
+	canvas = Canvas( dwg )
 	# draw struct here
-	dwg = draw_stems(stems, dwg)
+	for stem in stems:
+		canvas.add_stem( stem )
 
 	# Later, figure out whether particular loops are apical or junctions or whatever.
 	# Really, at that point we'll have to jointly figure out coordinates anyway. 
 	for (stem_idx, stem), apical_loop in apicals( stems, loops ):
-		dwg = draw_apical_loop_reasonably_with_respect_to_stem( apical_loop, stem_idx, stem, seq, dwg ) 
+		canvas.draw_apical_loop_reasonably_with_respect_to_stem( apical_loop, stem_idx, stem, seq ) 
 
 	# We don't handle j1/2 yet
 	# OK, by definition at the moment our y coords are zero 
 	# and x coords are stem_idx * stem_offset_width + bp_offset_width and stem_idx * stem_offset_width 
 	# so, interpolate
 	for (stem1_idx, stem1), (stem2_idx, stem2), junction_loop in junctions( stems, loops ):
-		dwg = draw_junction_loop_reasonably_with_respect_to_stems( junction_loop, stem1_idx, stem1, stem2_idx, stem2, seq, dwg ) 
+		canvas.draw_junction_loop_reasonably_with_respect_to_stems( junction_loop, stem1_idx, stem1, stem2_idx, stem2, seq ) 
 
 	# save drawing
 	dwg.save()

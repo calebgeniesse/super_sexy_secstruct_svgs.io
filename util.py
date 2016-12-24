@@ -1,4 +1,13 @@
 
+def color(nt):
+	if nt == 'a': return 'yellow'
+	if nt == 'c': return 'green'
+	if nt == 'g': return 'red'
+	if nt == 'u': return 'blue'
+	
+	print "WARNING: unrecognized nucleotide."
+
+
 # loops are consecutive sequences of non-stem residues
 def flatten( obj ):
 	arr = []
