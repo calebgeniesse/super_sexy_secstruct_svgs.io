@@ -65,7 +65,7 @@ def apicals( stems, loops ):
 	for loop in loops:
 		print "Apical?", loop
 		for stem_idx, stem in enumerate(stems):
-			print "\t",stem
+			print "\t",stem.numbers
 			if (min(loop)-1,max(loop)+1) in stem.numbers:
 				apicals.append([(stem_idx, stem), loop])
 				break
@@ -85,7 +85,7 @@ def junctions( stems, loops ):
 				if stem1_idx == stem2_idx: continue
 				if stem2_idx != stem1_idx + 1: continue
 				if max(flatten(stem1.numbers))+1 == min(loop) and min(flatten(stem2.numbers))-1 == max(loop):
-					junctions.append([(stem1_idx, stem1.numbers), (stem2_idx, stem2.numbers), loop])
+					junctions.append([(stem1_idx, stem1), (stem2_idx, stem2), loop])
 
 	print junctions
 	return junctions
@@ -155,7 +155,7 @@ if __name__=="__main__":
 	print stems
 	loops = []
 
-	loop_nt = [ i+1 for i in xrange(len(seq)) if i+1 not in flatten(stems) ]
+	loop_nt = [ i+1 for i in xrange(len(seq)) if i+1 not in flatten([stem.numbers for stem in stems ])]
 	#print "loop_nt", loop_nt
 	loops = consecutive_segments( loop_nt )
 	print loops
