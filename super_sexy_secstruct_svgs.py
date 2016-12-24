@@ -1,6 +1,8 @@
 import svgwrite
 
-from rna_server_conversions import get_all_stems, join_sequence
+import stem
+from stem import Stem
+from util import get_stems, flatten, consecutive_segments
 
 # General theory:
 #
@@ -28,23 +30,25 @@ def color(nt):
 	
 	print "WARNING: unrecognized nucleotide."
 
-def draw_stems(stems, seq, dwg):
+def draw_stems(stems, dwg):
 	# draw basepairs
+	# SOON: stem_idx won't matter because we'll have a smart canvas.
 	for stem_idx, stem in enumerate(stems):
-		print  stem_idx, stem
+		print  stem_idx, stem.sequence
 		x_offset = stem_idx * stem_offset_width
-		for bp_idx, [bp1, bp2] in enumerate(stem): 
+		for bp_idx, [bp1, bp2] in enumerate(stem.base_pairs): 
 			# need to compute some offet? ...
 			y_offset = bp_idx * bp_offset_height
 			dwg.add(dwg.line((x_offset + 10, y_offset), (x_offset + 20, y_offset), 
 					stroke=svgwrite.rgb(10, 10, 16, '%')))
-			dwg.add(dwg.text(seq[bp1-1], insert=(x_offset+0, y_offset), fill=color(seq[bp1-1])))#'blue'))
-			dwg.add(dwg.text(seq[bp2-1], insert=(x_offset+bp_offset_width, y_offset), fill=color(seq[bp2-1])))#'yellow'))
+			dwg.add(dwg.text(bp1, insert=(x_offset+0, y_offset), fill=color(bp1)))#'blue'))
+			dwg.add(dwg.text(bp2, insert=(x_offset+bp_offset_width, y_offset), fill=color(bp2)))#'yellow'))
 
 			# numbers if multiple of 5
 			# TODO: adjust size
-			if bp1 % 5 == 0: dwg.add(dwg.text(bp1, insert=(x_offset+(-10), y_offset+5), fill=color(seq[bp1-1])))#'blue'))
-			if bp2 % 5 == 0: dwg.add(dwg.text(bp2, insert=(x_offset+30+(10), y_offset+5), fill=color(seq[bp2-1])))#'blue'))
+			num1, num2 = stem.numbers[bp_idx]
+			if num1 % 5 == 0: dwg.add(dwg.text(num1, insert=(x_offset+(-10), y_offset+5), fill=color(bp1)))#'blue'))
+			if num2 % 5 == 0: dwg.add(dwg.text(num2, insert=(x_offset+30+(10), y_offset+5), fill=color(bp2)))#'blue'))
 
 
 	return dwg
@@ -62,7 +66,7 @@ def apicals( stems, loops ):
 		print "Apical?", loop
 		for stem_idx, stem in enumerate(stems):
 			print "\t",stem
-			if [min(loop)-1,max(loop)+1] in stem:
+			if (min(loop)-1,max(loop)+1) in stem.numbers:
 				apicals.append([(stem_idx, stem), loop])
 				break
 
@@ -80,8 +84,8 @@ def junctions( stems, loops ):
 			for stem2_idx, stem2 in enumerate(stems):
 				if stem1_idx == stem2_idx: continue
 				if stem2_idx != stem1_idx + 1: continue
-				if max(flatten(stem1))+1 == min(loop) and min(flatten(stem2))-1 == max(loop):
-					junctions.append([(stem1_idx, stem1), (stem2_idx, stem2), loop])
+				if max(flatten(stem1.numbers))+1 == min(loop) and min(flatten(stem2.numbers))-1 == max(loop):
+					junctions.append([(stem1_idx, stem1.numbers), (stem2_idx, stem2.numbers), loop])
 
 	print junctions
 	return junctions
@@ -94,7 +98,7 @@ def draw_apical_loop_reasonably_with_respect_to_stem( apical_loop, stem_idx, ste
 	for loop_idx, loop_nt in enumerate(apical_loop):
 		x_offset = stem_idx * stem_offset_width + loop_idx * 8
 		# This would come out of stem length
-		y_offset = len(stem) * bp_offset_height + 10
+		y_offset = len(stem.base_pairs) * bp_offset_height + 10
 		dwg.add(dwg.text(seq[loop_nt-1], insert=(x_offset, y_offset), fill=color(seq[loop_nt-1])))#'blue'))
 	return dwg
 
@@ -111,12 +115,15 @@ def draw_junction_loop_reasonably_with_respect_to_stems( junction_loop, stem1_id
 		dwg.add(dwg.text(seq[loop_nt-1], insert=((x1+(float(x2-x1)* fraction_done_with_loop ) ), -10 ), fill=color(seq[loop_nt-1])))#'blue'))
 	return dwg
 
-def draw_secstruct(stems, loops, seq, file_name='default.out'):
+def draw_secstruct(stems, loops, seq, file_name='default.svg'):
 	# init drawing
 	dwg = svgwrite.Drawing(file_name)
 
+	# determine stem coordinates and orientation
+		
+	
 	# draw struct here
-	dwg = draw_stems(stems, seq, dwg)
+	dwg = draw_stems(stems, dwg)
 
 	# Later, figure out whether particular loops are apical or junctions or whatever.
 	# Really, at that point we'll have to jointly figure out coordinates anyway. 
@@ -138,37 +145,15 @@ if __name__=="__main__":
 	fn = 's_s_ss.svg'
 	seq = 'ccccgcaaggggaucccauguucgcaug'
 	ss  = '((((....))))....((((....))))'
-	stems = get_all_stems( ss, [], seq )
+    # Eventually: support chainbreaks
+	stems = get_stems( ss, seq )
+	# This produces old-style numerical stems. I want to turn them into
+    # sequence stems. Use the sequence + numerical stem ctor.
+	print stems
+	stems = [ Stem( seq, stem ) for stem in stems ]
+
 	print stems
 	loops = []
-	# loops are consecutive sequences of non-stem residues
-	def flatten( obj ):
-		arr = []
-		try:
-			for i in obj:
-				arr.extend( flatten( i ) )
-			return arr
-		except:
-			return obj
-
-	def consecutive_segments( lst ):
-		lists = []
-		newlist = []
-		for idx, item in enumerate(lst):
-			#print lst, lists, newlist
-			if idx == 0:
-				newlist.append(item)
-				continue
-			elif item - lst[idx-1] > 1:
-				lists.append(newlist)
-				newlist = []
-				newlist.append(item)
-				continue
-			else: newlist.append(item)
-		lists.append(newlist)
-		
-		if lists[-1] == []: return lists[:-1]
-		return lists
 
 	loop_nt = [ i+1 for i in xrange(len(seq)) if i+1 not in flatten(stems) ]
 	#print "loop_nt", loop_nt
