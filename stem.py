@@ -43,5 +43,5 @@ class Stem:
 		self.base_pair_types = [ WATSON_CRICK for x in self.base_pairs ]
 
 		# At the moment, don't care about rotation -- this is just x,y
-		self.coordinate_frame = ( 0, 0 )
+		self.coordinate_frame = [ 0, 0 ]
 

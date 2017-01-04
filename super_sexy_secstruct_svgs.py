@@ -62,16 +62,19 @@ def draw_secstruct(stems, loops, seq, file_name='default.svg'):
 	dwg = svgwrite.Drawing(file_name)
 
 	canvas = Canvas( dwg )
-	# draw struct here
-	for stem in stems:
-		canvas.add_stem( stem )
+	for stem in stems: canvas.add_stem( stem )
 
-	# Later, figure out whether particular loops are apical or junctions or whatever.
 	# Really, at that point we'll have to jointly figure out coordinates anyway. 
+	for apical in [ loop for loop in loops if loop.apical ]: canvas.add_loop( apical )
+
+	# Should the canvas be calling drawing functions
+	# on the added stems/loops
+	# call it 'render'
+	for stem in stems: canvas.draw_stem( stem )
+
 	for apical in [ loop for loop in loops if loop.apical ]:
 		canvas.draw_apical_loop_reasonably_with_respect_to_stem( apical ) 
 
-	# We don't handle j1/2 yet
 	# OK, by definition at the moment our y coords are zero 
 	# and x coords are stem_idx * stem_offset_width + bp_offset_width and stem_idx * stem_offset_width 
 	# so, interpolate
