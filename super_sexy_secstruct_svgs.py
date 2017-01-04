@@ -63,9 +63,7 @@ def draw_secstruct(stems, loops, seq, file_name='default.svg'):
 
 	canvas = Canvas( dwg )
 	for stem in stems: canvas.add_stem( stem )
-
-	# Really, at that point we'll have to jointly figure out coordinates anyway. 
-	for apical in [ loop for loop in loops if loop.apical ]: canvas.add_loop( apical )
+	for loop in loops: canvas.add_loop( loop )
 
 	# Should the canvas be calling drawing functions
 	# on the added stems/loops
@@ -73,13 +71,10 @@ def draw_secstruct(stems, loops, seq, file_name='default.svg'):
 	for stem in stems: canvas.draw_stem( stem )
 
 	for apical in [ loop for loop in loops if loop.apical ]:
-		canvas.draw_apical_loop_reasonably_with_respect_to_stem( apical ) 
+		canvas.draw_apical_loop( apical ) 
 
-	# OK, by definition at the moment our y coords are zero 
-	# and x coords are stem_idx * stem_offset_width + bp_offset_width and stem_idx * stem_offset_width 
-	# so, interpolate
-	for junction_loop in [ loop for loop in loops if not loop.apical ]:
-		canvas.draw_junction_loop_reasonably_with_respect_to_stems( junction_loop )
+	for junction in [ loop for loop in loops if not loop.apical ]:
+		canvas.draw_junction_loop( junction )
 
 	# save drawing
 	dwg.save()
@@ -87,8 +82,10 @@ def draw_secstruct(stems, loops, seq, file_name='default.svg'):
 
 if __name__=="__main__":
 	fn = 's_s_ss.svg'
-	seq = 'ccccgcaaggggaucccauguucgcaug'
-	ss  = '((((....))))....((((....))))'
+	seq = 'ccaaccgcaagguuggaucccauguucgcaug'
+	ss  = '((((((....))))))....((((....))))'
+	#seq = 'ccccgcaaggggaucccauguucgcaug'
+	#ss  = '((((....))))....((((....))))'
     # Eventually: support chainbreaks
 	stems = get_stems( ss, seq )
 	# This produces old-style numerical stems. I want to turn them into
