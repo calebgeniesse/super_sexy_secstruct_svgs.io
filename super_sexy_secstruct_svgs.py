@@ -2,8 +2,9 @@ import svgwrite
 
 import stem
 from stem import Stem
+from loop import Loop
 from canvas import Canvas
-from util import get_stems, flatten, consecutive_segments, color
+from util import get_stems, flatten, consecutive_segments, color, seq_for
 
 # General theory:
 #
@@ -67,15 +68,15 @@ def draw_secstruct(stems, loops, seq, file_name='default.svg'):
 
 	# Later, figure out whether particular loops are apical or junctions or whatever.
 	# Really, at that point we'll have to jointly figure out coordinates anyway. 
-	for (stem_idx, stem), apical_loop in apicals( stems, loops ):
-		canvas.draw_apical_loop_reasonably_with_respect_to_stem( apical_loop, stem_idx, stem, seq ) 
+	for apical in [ loop for loop in loops if loop.apical ]:
+		canvas.draw_apical_loop_reasonably_with_respect_to_stem( apical ) 
 
 	# We don't handle j1/2 yet
 	# OK, by definition at the moment our y coords are zero 
 	# and x coords are stem_idx * stem_offset_width + bp_offset_width and stem_idx * stem_offset_width 
 	# so, interpolate
-	for (stem1_idx, stem1), (stem2_idx, stem2), junction_loop in junctions( stems, loops ):
-		canvas.draw_junction_loop_reasonably_with_respect_to_stems( junction_loop, stem1_idx, stem1, stem2_idx, stem2, seq ) 
+	for junction_loop in [ loop for loop in loops if not loop.apical ]:
+		canvas.draw_junction_loop_reasonably_with_respect_to_stems( junction_loop )
 
 	# save drawing
 	dwg.save()
@@ -99,4 +100,15 @@ if __name__=="__main__":
 	#print "loop_nt", loop_nt
 	loops = consecutive_segments( loop_nt )
 	print loops
-	dwg = draw_secstruct(stems, loops, seq, file_name=fn)
+	real_loops = []
+	for loop in loops:
+		adjacent_stems = [ stem for stem in stems if min(loop)-1 in flatten(stem.numbers) or max(loop)+1 in flatten(stem.numbers) ]
+		if len(adjacent_stems) == 0:
+			print "loop", loop , "has no adjacent stems!"
+			continue
+		if len(adjacent_stems) == 1:
+			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0] ) )
+		else: # junction. Don't cover 'tails' yet.
+			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0], False, adjacent_stems[1] ) )
+
+	dwg = draw_secstruct(stems, real_loops, seq, file_name=fn)

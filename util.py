@@ -1,4 +1,7 @@
 
+def seq_for( loop, seq ):
+	return "".join([ seq[idx-1] for idx in sorted(loop) ])
+
 def color(nt):
 	if nt == 'a': return 'yellow'
 	if nt == 'c': return 'green'
