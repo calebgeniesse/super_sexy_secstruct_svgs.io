@@ -1,3 +1,4 @@
+import math
 
 def seq_for( loop, seq ):
 	return "".join([ seq[idx-1] for idx in sorted(loop) ])
@@ -125,3 +126,44 @@ def get_stems( line, sequence_for_fasta ):
 
 		stems.append( stem_res )
 	return stems
+
+def loop_interpolate( x1,y1,x2,y2, fraction_of_circle, fraction_done_with_loop ):
+	"""
+	Suppose (x1,y1) and (x2,y2) are two points separated by fraction_of_circle of
+	arc. Then, return points fraction_done_with_loop along that arc between those
+	two points.
+	"""
+	#    C_________D
+	#    /\       /)|
+	#   /  \     /) |   find coordinates of D
+	#  /    \   )   |   given its fraction of total angle
+	# /______\_/____|      away from B or whatever.
+	#A    M   B     E
+	#        x1,y1   xD,y(AB*mAE/mAB)
+
+	mMCB = (360-fraction_of_circle*360)/2
+	mAB = math.sqrt( (x2-x1)**2 + (y2-y1)**2 )
+	mMC = 0.5 * mAB * math.tan(math.radians(mMCB))
+	mBC = 0.5 * mAB / math.sin(math.radians(mMCB))
+	r = mBC
+
+	# Thus all points satisfy x^2 + y^2 = mBC^2
+	mBCD = fraction_done_with_loop * fraction_of_circle*360
+
+	# MC perp MB, so C can be found: mMC in perp dir from av A, B
+	unit = None
+	if y1 == y2:
+		unit = [0,1]
+	else:
+		unit = float(-1)/float((y2-y1)/(x2-x1))
+	xC,yC = [ (unit[0] * mMC) + (x1+x2)/2, (unit[1] * mMC) + (y1+y2)/2]
+	#print xC, yC
+
+
+	# xC + r * cos a
+	# yC + r * sin a
+	# a is angle from horizontal right
+	# AMW TODO: for slightly nudged stems, this won't be -90
+	a = -90 + mMCB + mBCD
+	return [ xC + r * math.cos(math.radians(a)), yC + r * math.sin(math.radians(a))]
+

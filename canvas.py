@@ -1,5 +1,5 @@
 import svgwrite
-from util import color
+from util import color, loop_interpolate
 
 class Canvas:
 	def __init__( self, dwg, width_per_stem=80, width_per_bp=30, height_per_bp=20):
@@ -46,7 +46,7 @@ class Canvas:
 			loop.coordinate_frame[0][0]  = loop.stem1.coordinate_frame[0]
 			loop.coordinate_frame[0][1]  = loop.stem1.coordinate_frame[1]
 			# Offset for stem length
-			loop.coordinate_frame[0][1] += len(loop.stem1.base_pairs) * self.bp_offset_height 
+			loop.coordinate_frame[0][1] += len(loop.stem1.base_pairs) * self.bp_offset_height - self.bp_offset_height
 			# Extra for alignment (may change with font size?)
 			loop.coordinate_frame[0][1] += 2
 			
@@ -99,8 +99,8 @@ class Canvas:
 		[[x1,y1],[x2,y2]] = apical_loop.coordinate_frame
 		for loop_idx, loop_nt in enumerate(apical_loop.numbers):
 			fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( apical_loop.numbers ))
-			x = self.interpolate( x1, x2, fraction_done_with_loop ) 
-			y = self.interpolate( y1, y2, fraction_done_with_loop ) 
+			# Here's a good example of an apical-junction deviation.
+			[x, y] = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop )
 			self.draw_nt(apical_loop.sequence[loop_idx], (x, y))
 			
 			# When stems have 'orientation' draw these 'away from' stem

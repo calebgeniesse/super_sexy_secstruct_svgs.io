@@ -6,6 +6,13 @@ from loop import Loop
 from canvas import Canvas
 from util import get_stems, flatten, consecutive_segments, color, seq_for
 
+# test
+#from util import loop_interpolate
+#x1, y1 = [-1,0]
+#x2, y2 = [ 1,0]
+#print loop_interpolate( x1,y1,x2,y2, 0.75, 1.0/9.0 )
+#exit()
+
 # General theory:
 #
 # We are interested in the relative arrangement of a set of stems.
@@ -82,8 +89,10 @@ def draw_secstruct(stems, loops, seq, file_name='default.svg'):
 
 if __name__=="__main__":
 	fn = 's_s_ss.svg'
-	seq = 'ccaaccgcaagguuggaucccauguucgcaug'
-	ss  = '((((((....))))))....((((....))))'
+	seq = 'ccaaccgcaagguuggaucccauguucaaaaagcaug'
+	ss  = '((((((....))))))....((((.........))))'
+	#seq = 'ccaaccgcaagguuggaucccauguucgcaug'
+	#ss  = '((((((....))))))....((((....))))'
 	#seq = 'ccccgcaaggggaucccauguucgcaug'
 	#ss  = '((((....))))....((((....))))'
     # Eventually: support chainbreaks
