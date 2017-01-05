@@ -31,7 +31,7 @@ class Canvas:
 		self.draw_nt( bp2, (loc[0]+self.bp_offset_width, loc[1]) )
 		self.draw_line( (loc[0] + 10, loc[1] - self.font_height_offset), 
 						(loc[0] + 25, loc[1] - self.font_height_offset) )
-	
+
 	def add_stem( self, stem ):
 		stem.coordinate_frame = [ len(self.stems) * self.stem_offset_width, 0 ]
 		self.stems.append( stem )
@@ -68,6 +68,8 @@ class Canvas:
 			loop.coordinate_frame[1][0]  = loop.stem2.coordinate_frame[0]
 			loop.coordinate_frame[1][1]  = loop.stem2.coordinate_frame[1] 
 			loop.coordinate_frame[1][1] -= 10
+
+		self.loops.append(loop)
 
 
 	def draw_stem( self, stem ):
@@ -121,3 +123,11 @@ class Canvas:
 			# perpendicular to the vector between the stems I guess.
 			num = junction_loop.numbers[loop_idx]
 			if num % 5 == 0: self.draw_text( num, (x, y-10), color(junction_loop.sequence[loop_idx]) )
+
+	def render( self ):
+		for stem in self.stems: self.draw_stem( stem )
+		for apical in [ loop for loop in self.loops if loop.apical ]:
+			self.draw_apical_loop( apical )
+		for junction in [ loop for loop in self.loops if not loop.apical ]:
+			self.draw_junction_loop( junction )
+		self.dwg.save()

@@ -72,24 +72,12 @@ def draw_secstruct(stems, loops, seq, file_name='default.svg'):
 	for stem in stems: canvas.add_stem( stem )
 	for loop in loops: canvas.add_loop( loop )
 
-	# Should the canvas be calling drawing functions
-	# on the added stems/loops
-	# call it 'render'
-	for stem in stems: canvas.draw_stem( stem )
-
-	for apical in [ loop for loop in loops if loop.apical ]:
-		canvas.draw_apical_loop( apical ) 
-
-	for junction in [ loop for loop in loops if not loop.apical ]:
-		canvas.draw_junction_loop( junction )
-
-	# save drawing
-	dwg.save()
-	return dwg
+	canvas.render()
+	return canvas.dwg
 
 if __name__=="__main__":
 	fn = 's_s_ss.svg'
-	seq = 'ccaaccgcaagguuggaucccauguucaaaaagcaug'
+	seq = 'ccaaccgcaagguuggaucccauguuaaaaacgcaug'
 	ss  = '((((((....))))))....((((.........))))'
 	#seq = 'ccaaccgcaagguuggaucccauguucgcaug'
 	#ss  = '((((((....))))))....((((....))))'
