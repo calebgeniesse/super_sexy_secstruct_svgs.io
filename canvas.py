@@ -54,11 +54,34 @@ class Canvas:
 			loop.coordinate_frame[1][0]  = loop.coordinate_frame[0][0]
 			loop.coordinate_frame[1][0] += self.bp_offset_width
 			loop.coordinate_frame[1][1]  = loop.coordinate_frame[0][1]
+		elif loop.tail:
+			"""
+			We can kind of make some choices here. When stem orientation is variable
+			this will have to become a little more complicated, but at the moment we
+			will be able to set the end of the coordinate frame based on length.
+			"""
+			# Is the stem the beginning or end of the tail?
+			if min(loop.numbers)-1 in flatten(stem.numbers): # beginning
+				# Right now that means: extend to 'right'
+				# TODO: nt width magic number.
+				loop.coordinate_frame[0][0]  = loop.stem1.coordinate_frame[0]
+				loop.coordinate_frame[0][1]  = loop.stem1.coordinate_frame[1]
+				loop.coordinate_frame[1][0] = loop.coordinate_frame[0][0] + 7 * len(loop.numbers)
+				loop.coordinate_frame[1][1] = loop.coordinate_frame[1][1]
+			if max(loop.numbers)+1 in flatten(stem.numbers): # beginning
+				# Right now that means: extend to 'right'
+				# TODO: nt width magic number.
+				loop.coordinate_frame[0][0] = loop.coordinate_frame[1][0] - 7 * len(loop.numbers)
+				loop.coordinate_frame[0][1] = loop.coordinate_frame[1][1]
+				loop.coordinate_frame[1][0]  = loop.stem1.coordinate_frame[0]
+				loop.coordinate_frame[1][1]  = loop.stem1.coordinate_frame[1]
+
 		else:
 			"""
 			As long as we are just drawing this dumb left-to-right structure
 			with no stacking, we should assume we are going from the right side of 
-			stem1 to the left side of stem2
+			stem1 to the left side of stem2. Note that we will really have to think
+			in terms of the positions of individual NTs eventually.
 			"""
 			loop.coordinate_frame[0][0]  = loop.stem1.coordinate_frame[0]
 			loop.coordinate_frame[0][0] += self.bp_offset_width

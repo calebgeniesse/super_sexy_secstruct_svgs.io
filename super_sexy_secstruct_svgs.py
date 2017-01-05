@@ -27,6 +27,27 @@ from util import get_stems, flatten, consecutive_segments, color, seq_for
 # stem 0; at the moment, the position and orientation *cannot* vary). So we can compute
 # 'stem internal coordinates' -- trivial -- then transform them.
 
+def get_loops( seq, stems ):
+	loop_nt = [ i+1 for i in xrange(len(seq)) if i+1 not in flatten([stem.numbers for stem in stems ])]
+	#print "loop_nt", loop_nt
+	loops = consecutive_segments( loop_nt )
+	print loops
+	real_loops = []
+	for loop in loops:
+		adjacent_stems = [ stem for stem in stems if min(loop)-1 in flatten(stem.numbers) or max(loop)+1 in flatten(stem.numbers) ]
+		apical_stems = [ stem for stem in stems if min(loop)-1 in flatten(stem.numbers) and max(loop)+1 in flatten(stem.numbers) ]
+		if len(adjacent_stems) == 0:
+			print "loop", loop , "has no adjacent stems!"
+			continue
+		if len(apical_stems) == 1:
+			real_loops.append( Loop( seq_for( loop, seq ), loop, apical_stems[0] ) )
+		elif len(adjacent_stems) == 1: # tail
+			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0], False, True ) )
+		else: # junction. Don't cover 'tails' yet.
+			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0], False, False, adjacent_stems[1] ) )
+	return real_loops
+
+
 def apicals( stems, loops ):
 	"""
 	Finds all the apical loops in the given set of loops. All apical loops stretch
@@ -64,17 +85,6 @@ def junctions( stems, loops ):
 	print junctions
 	return junctions
 
-def draw_secstruct(stems, loops, seq, file_name='default.svg'):
-	# init drawing
-	dwg = svgwrite.Drawing(file_name)
-
-	canvas = Canvas( dwg )
-	for stem in stems: canvas.add_stem( stem )
-	for loop in loops: canvas.add_loop( loop )
-
-	canvas.render()
-	return canvas.dwg
-
 if __name__=="__main__":
 	fn = 's_s_ss.svg'
 	seq = 'ccaaccgcaagguuggaucccauguuaaaaacgcaug'
@@ -84,28 +94,16 @@ if __name__=="__main__":
 	#seq = 'ccccgcaaggggaucccauguucgcaug'
 	#ss  = '((((....))))....((((....))))'
     # Eventually: support chainbreaks
-	stems = get_stems( ss, seq )
+
 	# This produces old-style numerical stems. I want to turn them into
     # sequence stems. Use the sequence + numerical stem ctor.
-	print stems
-	stems = [ Stem( seq, stem ) for stem in stems ]
+	stems = [ Stem( seq, stem ) for stem in get_stems( ss, seq ) ]
 
-	print stems
-	loops = []
+	# Find loops by process of elimination
+	loops = get_loops( seq, stems )
 
-	loop_nt = [ i+1 for i in xrange(len(seq)) if i+1 not in flatten([stem.numbers for stem in stems ])]
-	#print "loop_nt", loop_nt
-	loops = consecutive_segments( loop_nt )
-	print loops
-	real_loops = []
-	for loop in loops:
-		adjacent_stems = [ stem for stem in stems if min(loop)-1 in flatten(stem.numbers) or max(loop)+1 in flatten(stem.numbers) ]
-		if len(adjacent_stems) == 0:
-			print "loop", loop , "has no adjacent stems!"
-			continue
-		if len(adjacent_stems) == 1:
-			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0] ) )
-		else: # junction. Don't cover 'tails' yet.
-			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0], False, adjacent_stems[1] ) )
+	dwg = svgwrite.Drawing( fn )
 
-	dwg = draw_secstruct(stems, real_loops, seq, file_name=fn)
+	canvas = Canvas( dwg )
+	for stem in stems: canvas.add_stem( stem )
+	for loop in loops: canvas.add_loop( loop )
