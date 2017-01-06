@@ -12,5 +12,5 @@ class CoordinateFrame:
 		
 class Position:
 	def __init__( self, x, y ):
-		self.position.x = x
-		self.position.y = y
+		self.x = x
+		self.y = y
