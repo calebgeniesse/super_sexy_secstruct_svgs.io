@@ -1,5 +1,6 @@
 import util
 from util import flatten
+from coordinate_frame import CoordinateFrame
 
 class Loop:
 	def __init__( self, sequence, numbers, stem1, apical=True, tail=False, stem2=None ):
@@ -19,5 +20,6 @@ class Loop:
 		#
 		# This will also be good practice for manipulating more complicated 
 		# coordinate frames later.
-		self.coordinate_frame = [[0,0],[0,0]]
+		# Note: orientation ignored.
+		self.coordinate_frame = CoordinateFrame( [0,0], 1, [0,0] )
 	

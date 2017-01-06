@@ -107,3 +107,15 @@ if __name__=="__main__":
 	canvas = Canvas( dwg )
 	for stem in stems: canvas.add_stem( stem )
 	for loop in loops: canvas.add_loop( loop )
+
+	# Inform the canvas that stem 1 and stem 2 are coaxial.
+	# This doesn't make that great semantic sense, but the canvas
+	# is the only stem-collection type object so it is aware of this
+	# sort of thing.
+
+	# Also, how is the API user really going to know?
+	# You'd imagine they'd actually want to set it based on
+	# labels containing residues or something...
+	canvas.set_stems_coaxial( 0, 1 )
+
+	canvas.render()

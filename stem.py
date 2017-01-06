@@ -1,5 +1,6 @@
 import util
 from util import flatten
+from coordinate_frame import CoordinateFrame
 
 # Thoughts:
 # 1. A Stem or Loop shouldn't know details of how it is rendered.
@@ -42,6 +43,6 @@ class Stem:
 		# All watson-crick for now.
 		self.base_pair_types = [ WATSON_CRICK for x in self.base_pairs ]
 
-		# At the moment, don't care about rotation -- this is just x,y
-		self.coordinate_frame = [ 0, 0 ]
+		# First rotation notion. Pair with 1 (DOWN) or -1 (UP)
+		self.coordinate_frame = CoordinateFrame( [ 0, 0 ], 1 )
 

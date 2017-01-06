@@ -11,6 +11,7 @@ def color(nt):
 	
 	print "WARNING: unrecognized nucleotide."
 
+def interpolate( v1, v2, frac ): return v1 + float(v2-v1)*frac
 
 # loops are consecutive sequences of non-stem residues
 def flatten( obj ):
@@ -44,7 +45,11 @@ def consecutive_segments( lst ):
 def get_stems( line, sequence_for_fasta ):
 	"""
 	Not concerned with handling pseudoknots for now so let's just grab stems from our
-	SS and sequence and get out of here.
+	SS and sequence and get out of here. We are assuming that all stems are, in this
+	sense, 'coequal.'
+
+	A reasonable approach eventually would be to mandate that () is reserved for non-PK
+	stems.
 	"""
 
 	chainbreak_pos = []
