@@ -48,8 +48,8 @@ class Stem:
 		# Trim common spacers from sequence
 		# Fold sequence into BPs
 		self.base_pairs = [ BasePair( 
-								Nucleotide(sequence[i], i+1), 
-								Nucleotide(sequence[len(sequence)-i-1], len(sequence)-i-1) )  
+								Nucleotide(sequence[i], numbers[i]), 
+								Nucleotide(sequence[len(sequence)-i-1], numbers[len(sequence)-i-1]) )  
 		                    for i in xrange(len(sequence)/2 ) ]
 
 		# Build up nucleotides.

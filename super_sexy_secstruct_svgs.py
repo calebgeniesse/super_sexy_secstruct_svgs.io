@@ -128,10 +128,12 @@ def perturb( canvas ):
 	"""
 
 	new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
-
+	print new_canvas.nucleotides.keys()
 	for seqpos in new_canvas.nucleotides.keys():
-		new_canvas.nucleotides[seqpos].x += np.random.normal()
-		new_canvas.nucleotides[seqpos].y += np.random.normal()
+		#print "Moving nt %d from ( %f, %f )... " % ( seqpos, new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y ),
+		new_canvas.nucleotides[seqpos].x += np.random.normal(0,5)
+		new_canvas.nucleotides[seqpos].y += np.random.normal(0,5)
+		#print "... to ( %f, %f )!" % ( new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y )
 
 	return new_canvas
 
