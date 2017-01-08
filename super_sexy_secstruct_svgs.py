@@ -91,26 +91,62 @@ def junctions( stems, loops ):
 
 # constants used below. May end up functions of font.
 NT_DISTANCE = 20
+NT_MIN_DISTANCE = 10
+NT_MAX_DISTANCE = 25
+NT_MIN_ANGLE    = 90
+NT_MAX_ANGLE    = 180 # maybe should be 300... hm.
 # Imagine having different spring constants for stem vs loop vs PK
+#spring_constant = .1 suitable for harmonic, but not ideal
 spring_constant = 1
+angular_spring_constant = 1.0/15.0
 
 def score( canvas ):
 	"""
 	Assign a score to a configuration of nucleotides.
 	"""
 
-	def distance( nt1, nt2 ):
-		return math.sqrt( ( nt1.x - nt2.x ) ** 2 + ( nt1.y - nt2.y ) ** 2 )
+	def mod( vec ): return math.sqrt( vec[0] ** 2 + vec[1] ** 2 )
+
+	def dot( v1, v2 ): return v1[0]*v2[0] + v1[1]*v2[1]
+
+	def vector( nt1, nt2 ): return [ nt2.x - nt1.x, nt2.y - nt1.y ]
+
+	def distance( nt1, nt2 ): return mod( vector( nt1, nt2 ) )
+	
+	def angle( nt1, nt2, nt3 ):
+		""" Math looks right on this one but I am getting the supplement. So, fixing..."""
+		return 180.0 - math.degrees( math.acos( dot( vector( nt1, nt2 ), vector( nt2, nt3 ) ) / ( mod( vector( nt1, nt2 ) ) * mod( vector( nt2, nt3 ) ) ) ) )
 
 	def harmonic_penalty( dist, ideal, spring_constant ):
 		return spring_constant * ( dist - ideal ) ** 2
 
+	def flat_harmonic_penalty( dist, min, max, spring_constant ):
+		if dist < min:
+			return spring_constant * ( dist - min ) ** 2
+		elif dist > max:
+			return spring_constant * ( dist - max ) ** 2
+		else:
+			return 0
+
 	score = 0
 
 	# 1. Nucleotides should be a particular distance from what's adjacent to them in sequence.
+	# Form shouldn't be harmonic. Many distances are 'fine' -- say, 10-20 -- so we need a 'flat harmonic'
 	for seqpos in canvas.nucleotides.keys():
 		if seqpos + 1 in canvas.nucleotides.keys():
-			score += harmonic_penalty( distance( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1] ), NT_DISTANCE, spring_constant )
+			d = distance( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1] )
+			print "Distance between %d and %d is %f" % (seqpos, seqpos+1, d)
+			#score += harmonic_penalty( d, NT_DISTANCE, spring_constant )
+			score += flat_harmonic_penalty( d, NT_MIN_DISTANCE, NT_MAX_DISTANCE, spring_constant )
+
+	# 1b. Angles
+	for seqpos in canvas.nucleotides.keys():
+		if seqpos + 1 in canvas.nucleotides.keys():
+			if seqpos + 2 in canvas.nucleotides.keys():
+				a = angle( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1], canvas.nucleotides[seqpos+2] )
+				print "Angle between %d and %d and %d is %f" % (seqpos, seqpos+1, seqpos+2, a)
+				# Don't worry about angular harmonic func at the moment.
+				score += flat_harmonic_penalty( a, NT_MIN_ANGLE, NT_MAX_ANGLE, angular_spring_constant )
 
 	# 2. Nucleotides should be at least 15 from ALL other nts. Don't double-count.
 	for seqpos1 in canvas.nucleotides.keys():
@@ -118,22 +154,48 @@ def score( canvas ):
 			if seqpos1 >= seqpos2: continue
 			if distance( canvas.nucleotides[seqpos1], canvas.nucleotides[seqpos2] ) < 15: score += 100
 			
+	# 3. Stems should be straight and vertical.
+	### Resolved via kinematics?
+
+	# 4. Coaxial stacks, where known, should be colinear.
+
+	# 5. Apical loops should be symmetrical and near a circular path.
+	for loop in canvas.loops:
+		for seqpos in loop.nucleotides.keys():
+			pass
 
 	return score
 
 def perturb( canvas ):
 	"""
 	Random perturbation to each NT. Gaussian?
-	Probably copying issues because Python.
+	Should ultimately have realistic kinematics... stems should move together, or at least BPs should.
 	"""
 
+	# Achieve OK stem kinematics by perturbing one nt in a stem and marking the whole thing as moved.
+	moved_this_turn = { seqpos: False for seqpos in canvas.nucleotides.keys() }
+
 	new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
-	print new_canvas.nucleotides.keys()
 	for seqpos in new_canvas.nucleotides.keys():
+		if moved_this_turn[ seqpos ]: continue
+
+		moved_this_turn[ seqpos ] = True
+		dx = np.random.normal(0,3)
+		dy = np.random.normal(0,3)
+		
 		#print "Moving nt %d from ( %f, %f )... " % ( seqpos, new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y ),
-		new_canvas.nucleotides[seqpos].x += np.random.normal(0,5)
-		new_canvas.nucleotides[seqpos].y += np.random.normal(0,5)
+		new_canvas.nucleotides[seqpos].x += dx
+		new_canvas.nucleotides[seqpos].y += dy
 		#print "... to ( %f, %f )!" % ( new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y )
+
+		# Find any stems this seqpos might be part of...
+		for stem in new_canvas.stems:
+			if seqpos in stem.nucleotides.keys():
+				for pos in stem.nucleotides.keys(): 
+					if pos == seqpos: continue
+					moved_this_turn[ pos ] = True
+					new_canvas.nucleotides[pos].x += dx
+					new_canvas.nucleotides[pos].y += dy
 
 	return new_canvas
 
@@ -145,7 +207,7 @@ def mc( canvas ):
 	This is an in-progress framework for doing MCMC simulations on a canvas.
 	The idea is that you score NT configurations, update, etc.
 	"""
-	cycles = 100
+	cycles = 1000
 	for x in xrange(cycles):
 		old_score = score(canvas)
 		new_canvas = perturb(canvas)

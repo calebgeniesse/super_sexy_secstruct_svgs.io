@@ -33,11 +33,11 @@ class Canvas:
 	def draw_text( self, text, loc, color ):
 		self.dwg.add(self.dwg.text(text, insert=loc, fill=color ) )
 	
-	def draw_line( self, loc1, loc2 ):
+	def draw_line( self, loc1, loc2, stroke=svgwrite.rgb(10, 10, 16, '%') ):
 		""" 
 		Only supports black for now.
 		"""
-		self.dwg.add(self.dwg.line(loc1, loc2, stroke=svgwrite.rgb(10, 10, 16, '%')))
+		self.dwg.add(self.dwg.line(loc1, loc2, stroke=stroke ) )
 
 	def draw_nt( self, nt ):
 		self.dwg.add(self.dwg.text(nt.name, insert=(nt.x, nt.y), fill=color(nt.name) ) )
@@ -71,7 +71,6 @@ class Canvas:
 		
 		# Set initial positions
 
-		# draw basepairs
 		x_offset = stem.coordinate_frame.position.x
 		y = stem.coordinate_frame.position.y
 		for bp_idx, bp in enumerate(stem.base_pairs): 
@@ -177,6 +176,9 @@ class Canvas:
 		bothering yet.
 		"""
 
+		# Uh oh! We had committed to this "single coordinate frame per stem" idea. But now we really want
+		# to interact with nucleotides directly!
+
 		cf1 = self.stems[idx1].coordinate_frame
 		cf2 = self.stems[idx2].coordinate_frame
 		
@@ -186,6 +188,19 @@ class Canvas:
 
 		cf2.position.y = cf1.position.y + cf2.orientation * ( self.bp_offset_height + 1 )
 		cf2.position.x = cf1.position.x # coaxiality
+
+		# We can learn a lot from add_stem...
+		x_offset = cf2.position.x
+		y = cf2.position.y
+		for bp_idx, bp in enumerate(self.stems[idx2].base_pairs): 
+			# need to compute some offet? ...
+			print "orientation is ", self.stems[idx2].coordinate_frame.orientation
+			y_offset = bp_idx * self.bp_offset_height * self.stems[idx2].coordinate_frame.orientation
+			bp.nt1.x = x_offset
+			bp.nt1.y = y + y_offset
+			bp.nt2.x = x_offset + self.bp_offset_width
+			bp.nt2.y = y + y_offset
+
 
 
 	def draw_stem( self, stem ):
@@ -207,10 +222,38 @@ class Canvas:
 		for loop_idx, loop_nt in enumerate(junction_loop.nucleotides.keys()):
 			self.draw_nt(junction_loop.nucleotides[loop_nt])
 			
+	def draw_sequence_line( self, pos1, pos2 ):
+		"""
+		Draw a line between consecutive nucleotides. Thin and grey. 
+		Figure out where the subjective centers of the nts are ( depends on font but likely about 
+		5-6 px up and right of (x,y) ) and draw about 80% of that vector.
+		"""
+
+		center1 = [ self.nucleotides[ pos1 ].x + 5, self.nucleotides[ pos1 ].y - 5 ]
+		center2 = [ self.nucleotides[ pos2 ].x + 5, self.nucleotides[ pos2 ].y - 5 ]
+
+		#beg = [ 0.9 * center1[0] + 0.1 * center2[0], 0.9 * center1[1] + 0.1 * center2[1] ]
+		#end = [ 0.1 * center1[0] + 0.9 * center2[0], 0.1 * center1[1] + 0.9 * center2[1] ]
+
+		# Aim is 60%
+		frac = 0.5
+		f1 = ( 1.0 + frac ) / 2
+		f2 = ( 1.0 - frac ) / 2
+
+		beg = [ f1 * center1[0] + f2 * center2[0], f1 * center1[1] + f2 * center2[1] ]
+		end = [ f2 * center1[0] + f1 * center2[0], f2 * center1[1] + f1 * center2[1] ]
+
+		self.draw_line( beg, end, 'gray' )
+
 	def render( self ):
 		for stem in self.stems: self.draw_stem( stem )
 		for apical in [ loop for loop in self.loops if loop.apical ]:
 			self.draw_apical_loop( apical )
 		for junction in [ loop for loop in self.loops if not loop.apical ]:
 			self.draw_junction_loop( junction )
+
+		for seqpos in self.nucleotides.keys():
+			if seqpos + 1 in self.nucleotides.keys():
+				self.draw_sequence_line( seqpos, seqpos + 1 )
+
 		self.dwg.save()
