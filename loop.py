@@ -12,7 +12,7 @@ class Loop:
 		self.sequence = sequence
 		self.numbers = numbers
 
-		self.nucleotides = { i+1: Nucleotide( sequence[i], i+1 ) for i in xrange(len(sequence)) }
+		self.nucleotides = { numbers[i]: Nucleotide( sequence[i], numbers[i] ) for i in xrange(len(sequence)) }
 
 		self.stem1 = stem1
 		self.apical = apical
