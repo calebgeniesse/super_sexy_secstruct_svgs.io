@@ -112,6 +112,13 @@ def score( canvas ):
 		if seqpos + 1 in canvas.nucleotides.keys():
 			score += harmonic_penalty( distance( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1] ), NT_DISTANCE, spring_constant )
 
+	# 2. Nucleotides should be at least 15 from ALL other nts. Don't double-count.
+	for seqpos1 in canvas.nucleotides.keys():
+		for seqpos2 in canvas.nucleotides.keys():
+			if seqpos1 >= seqpos2: continue
+			if distance( canvas.nucleotides[seqpos1], canvas.nucleotides[seqpos2] ) < 15: score += 100
+			
+
 	return score
 
 def perturb( canvas ):
