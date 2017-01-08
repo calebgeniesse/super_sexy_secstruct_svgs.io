@@ -183,10 +183,12 @@ if __name__=="__main__":
 	# labels containing residues or something...
 	#canvas.set_stems_coaxial( 0, 1 )
 
+
+
 	# We have to do this before adding any loops because (initial) positions
 	# are calculated after addition time.
 	for loop in loops: canvas.add_loop( loop )
 	
-	mc(canvas)
+	canvas = mc(canvas)
 	
 	canvas.render()

@@ -39,26 +39,23 @@ class Canvas:
 		"""
 		self.dwg.add(self.dwg.line(loc1, loc2, stroke=svgwrite.rgb(10, 10, 16, '%')))
 
-	def draw_nt( self, nt, loc ):
-		self.dwg.add(self.dwg.text(nt.name, insert=loc, fill=color(nt.name) ) )
+	def draw_nt( self, nt ):
+		self.dwg.add(self.dwg.text(nt.name, insert=(nt.x, nt.y), fill=color(nt.name) ) )
+
 		# numbers if multiple of 5
 		# TODO: adjust size
-		# Also TODO: have these occur independent of stem vs loop
-		# but right now, convenient
-		
-		if nt.seqpos % 5 == 0: self.draw_text( nt.seqpos, (loc[0]-15, loc[1]+5), color(nt.name) )	
+		if nt.seqpos % 5 == 0: self.draw_text( nt.seqpos, (nt.x-15, nt.y+5), color(nt.name) )	
 	
-	# Now they HAVE the location
-	def draw_bp( self, bp1, bp2, loc ):
+	def draw_bp( self, bp1, bp2 ):
 		"""
 		Needs some kind of line centering relative to the height of the characters.
 		"""
-		#self.draw_nt( bp1, loc )
-		#self.draw_nt( bp2, (loc[0]+self.bp_offset_width, loc[1]) )
-		self.draw_nt( bp1, (bp1.x,bp1.y) )
-		self.draw_nt( bp2, (bp2.x,bp2.y) )
-		self.draw_line( (loc[0] + 10, loc[1] - self.font_height_offset), 
-						(loc[0] + 25, loc[1] - self.font_height_offset) )
+		self.draw_nt( bp1 )
+		self.draw_nt( bp2 )
+		# Assumed horizontal. Don't have a good idea of how to figure out this line otherwise.
+		# Probably draw about 80% of (x1,y1)-(x2,y2)
+		self.draw_line( (bp1.x + 10, bp1.y - self.font_height_offset), 
+						(bp1.x + 25, bp1.y - self.font_height_offset) )
 		
 	def add_stem( self, stem ):
 		"""
@@ -200,65 +197,16 @@ class Canvas:
 			print "orientation is ", stem.coordinate_frame.orientation
 			y_offset = bp_idx * self.bp_offset_height * stem.coordinate_frame.orientation
 			
-			#self.draw_bp( bp.nt1, bp.nt2, (x_offset, y + y_offset) )
-			self.draw_bp( bp.nt1, bp.nt2, (bp.nt1.x, bp.nt1.y) ) # loc now ignored, soon remove.
-
+			self.draw_bp( bp.nt1, bp.nt2 )
+			
 	def draw_apical_loop( self, apical_loop ):
-		"""
-		Right now this looks identical to draw_junction_loop.
-		But we could imagine different interpolation/shape behaviors
-		are appropriate for each.
-		"""
-		#[[x1,y1],orientation,[x2,y2]] = apical_loop.coordinate_frame
-		# Now handled above
-		#x1, y1 = apical_loop.coordinate_frame.position.x,  apical_loop.coordinate_frame.position.y
-		#x2, y2 = apical_loop.coordinate_frame.position2.x, apical_loop.coordinate_frame.position2.y
-		#print "From ", x1, y1, "to", x2, y2
-		
-		# AMW TEMP: we are right now moving towards a system where a loop already knows its position(s)
-		# per nucleotide but we aren't there yet. So for now, note that loop_nt is suddenly a key to a dict
-		# of Nucleotides -- not a number.
-		#for loop_idx, loop_nt in enumerate(apical_loop.numbers):
 		for loop_idx, loop_nt in enumerate(apical_loop.nucleotides.keys()):
+			self.draw_nt(apical_loop.nucleotides[loop_nt])
 			
-			# Now we do this at addition
-			#fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( apical_loop.numbers ))
-			#[x, y] = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop )
-			
-			# PART OF TRANSITION -- WILL BE BAD RIGHT NOW.
-			#self.draw_nt(apical_loop.nucleotides[loop_nt], (x, y))
-			self.draw_nt(apical_loop.nucleotides[loop_nt], (apical_loop.nucleotides[loop_nt].x, apical_loop.nucleotides[loop_nt].y))
-
-			# When stems have 'orientation' draw these 'away from' stem
-			### TEMP not possible if we don't recalc
-			#num = apical_loop.numbers[loop_idx]
-			#if num % 5 == 0: self.draw_text( num, (x, y+10), color(apical_loop.sequence[loop_idx]) )
-		
 	def draw_junction_loop( self, junction_loop ):
-		#[[x1,y1],[x2,y2]] = junction_loop.coordinate_frame
-		x1, y1 = junction_loop.coordinate_frame.position.x,  junction_loop.coordinate_frame.position.y
-		x2, y2 = junction_loop.coordinate_frame.position2.x, junction_loop.coordinate_frame.position2.y
-		
-		# AMW TEMP: we are right now moving towards a system where a loop already knows its position(s)
-		# per nucleotide but we aren't there yet. So for now, note that loop_nt is suddenly a key to a dict
-		# of Nucleotides -- not a number.
-		#for loop_idx, loop_nt in enumerate(junction_loop.numbers):
 		for loop_idx, loop_nt in enumerate(junction_loop.nucleotides.keys()):
-			# This fraction goes 0, 0.25, 0.5, 0.75
-			# We need something more aggressive, esp. due to character alignment.
-			fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( junction_loop.numbers ))
-			x = interpolate(x1, x2, fraction_done_with_loop )
-			y = interpolate(y1, y2, fraction_done_with_loop )
+			self.draw_nt(junction_loop.nucleotides[loop_nt])
 			
-			# PART OF TRANSITION -- WILL BE BAD RIGHT NOW.		
-			#self.draw_nt(junction_loop.nucleotides[loop_nt], (x,-10))
-			self.draw_nt(junction_loop.nucleotides[loop_nt], (junction_loop.nucleotides[loop_nt].x,junction_loop.nucleotides[loop_nt].y))
-
-			# When stems have 'orientation' draw these away in the direction 
-			# perpendicular to the vector between the stems I guess.
-			num = junction_loop.numbers[loop_idx]
-			if num % 5 == 0: self.draw_text( num, (x, y-10), color(junction_loop.sequence[loop_idx]) )
-
 	def render( self ):
 		for stem in self.stems: self.draw_stem( stem )
 		for apical in [ loop for loop in self.loops if loop.apical ]:
