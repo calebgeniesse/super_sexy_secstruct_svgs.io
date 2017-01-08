@@ -7,6 +7,7 @@ from canvas import Canvas
 from util import get_stems, flatten, consecutive_segments, color, seq_for
 import numpy as np
 import math
+import copy
 
 # test
 #from util import loop_interpolate
@@ -119,7 +120,7 @@ def perturb( canvas ):
 	Probably copying issues because Python.
 	"""
 
-	new_canvas = canvas
+	new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
 
 	for seqpos in new_canvas.nucleotides.keys():
 		new_canvas.nucleotides[seqpos].x += np.random.normal()
@@ -139,7 +140,7 @@ def mc( canvas ):
 	for x in xrange(cycles):
 		old_score = score(canvas)
 		new_canvas = perturb(canvas)
-		new_score = score(canvas)
+		new_score = score(new_canvas)
 		if new_score < old_score or metropolis( new_score, old_score, temp=1 ):
 			# accept
 			print "Accepted perturbation from %f to %f." % ( old_score, new_score )
