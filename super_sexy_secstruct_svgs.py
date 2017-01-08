@@ -5,6 +5,7 @@ from stem import Stem
 from loop import Loop
 from canvas import Canvas
 from util import get_stems, flatten, consecutive_segments, color, seq_for
+import numpy as np
 
 # test
 #from util import loop_interpolate
@@ -85,6 +86,67 @@ def junctions( stems, loops ):
 	print junctions
 	return junctions
 
+
+# constants used below. May end up functions of font.
+NT_DISTANCE = 20
+# Imagine having different spring constants for stem vs loop vs PK
+spring_constant = 1
+
+def score( canvas ):
+	"""
+	Assign a score to a configuration of nucleotides.
+	"""
+
+	def distance( nt1, nt2 ):
+		return math.sqrt( ( nt1.x - nt2.x ) ** 2 + ( nt1.y - nt2.y ) ** 2 )
+
+	def harmonic_penalty( dist, ideal, spring_constant ):
+		return spring_constant * ( dist - ideal ) ** 2
+
+	score = 0
+
+	# 1. Nucleotides should be a particular distance from what's adjacent to them in sequence.
+	for seqpos in canvas.nucleotides.keys():
+		if seqpos + 1 in canvas.nucleotides.keys():
+			score += harmonic_penalty( distance( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1], NT_DISTANCE, spring_constant ) )
+
+	return score
+
+def perturb( canvas ):
+	"""
+	Random perturbation to each NT. Gaussian?
+	Probably copying issues because Python.
+	"""
+
+	new_canvas = canvas
+
+	for seqpos in new_canvas.nucleotides.keys():
+		new_canvas.nucleotides[seqpos].x += np.random.normal()
+		new_canvas.nucleotides[seqpos].y += np.random.normal()
+
+	return new_canvas
+
+def metropolis( new, old, temp ): 
+	return np.random.uniform() < math.exp( ( old - new ) / temp )
+
+def mc( canvas ):
+	"""
+	This is an in-progress framework for doing MCMC simulations on a canvas.
+	The idea is that you score NT configurations, update, etc.
+	"""
+	cycles = 100
+	for x in xrange(cycles):
+		old_score = score(canvas)
+		new_canvas = perturb(canvas)
+		new_score = score(canvas)
+		if new_score < old_score or metropolis( new_score, old_score, temp=1 ):
+			# accept
+			print "Accepted perturbation from %f to %f." % ( old_score, new_score )
+			canvas = new_canvas
+		else:
+			print "Rejected perturbation from %f to %f." % ( old_score, new_score )
+	return canvas
+
 if __name__=="__main__":
 	fn = 's_s_ss.svg'
 	seq = 'ccaaccgcaagguuggaucccauguuaaaaacgcaug'
@@ -106,8 +168,8 @@ if __name__=="__main__":
 
 	canvas = Canvas( dwg )
 	for stem in stems: canvas.add_stem( stem )
-	for loop in loops: canvas.add_loop( loop )
 
+	
 	# Inform the canvas that stem 1 and stem 2 are coaxial.
 	# This doesn't make that great semantic sense, but the canvas
 	# is the only stem-collection type object so it is aware of this
@@ -117,5 +179,9 @@ if __name__=="__main__":
 	# You'd imagine they'd actually want to set it based on
 	# labels containing residues or something...
 	canvas.set_stems_coaxial( 0, 1 )
+
+	# We have to do this before adding any loops because (initial) positions
+	# are calculated after addition time.
+	for loop in loops: canvas.add_loop( loop )
 
 	canvas.render()

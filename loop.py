@@ -1,6 +1,7 @@
 import util
 from util import flatten
 from coordinate_frame import CoordinateFrame
+from nucleotide import Nucleotide
 
 class Loop:
 	def __init__( self, sequence, numbers, stem1, apical=True, tail=False, stem2=None ):
@@ -10,6 +11,9 @@ class Loop:
 		"""
 		self.sequence = sequence
 		self.numbers = numbers
+
+		self.nucleotides = [ Nucleotide( sequence[i], i+1 ) for i in xrange(len(sequence)) ]
+
 		self.stem1 = stem1
 		self.apical = apical
 		self.tail = tail
