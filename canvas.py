@@ -29,7 +29,7 @@ class Canvas:
 		# Also TODO: have these occur independent of stem vs loop
 		# but right now, convenient
 		
-		if nt.seqpos % 5 == 0: self.draw_text( nt.seqpos, (x_offset-15, y+y_offset+5), color(nt.name) )	
+		if nt.seqpos % 5 == 0: self.draw_text( nt.seqpos, (loc[0]-15, loc[1]+5), color(nt.name) )	
 	
 	def draw_bp( self, bp1, bp2, loc ):
 		"""
@@ -50,8 +50,8 @@ class Canvas:
 		# Previously we would re-construct a coordinate frame here. That seems dumb.
 		stem.coordinate_frame.position.x = len(self.stems) * self.stem_offset_width
 		self.stems.append( stem )
-		self.nucleotides.extend( stem.nucleotides )
-
+		for seqpos in stem.nucleotides.keys(): self.nucleotides[ seqpos ] = stem.nucleotides[ seqpos ]
+			
 	def add_loop( self, loop ):
 		if loop.apical:
 			"""
@@ -108,7 +108,7 @@ class Canvas:
 			loop.coordinate_frame.position2.y -= 10
 
 		self.loops.append(loop)
-		self.nucleotides.extend( loop.nucleotides )
+		for seqpos in loop.nucleotides.keys(): self.nucleotides[ seqpos ] = loop.nucleotides[ seqpos ]
 
 
 	def set_stems_coaxial( self, idx1, idx2 ):
@@ -137,11 +137,13 @@ class Canvas:
 		# draw basepairs
 		x_offset = stem.coordinate_frame.position.x
 		y = stem.coordinate_frame.position.y
-		for bp_idx, [bp1, bp2] in enumerate(stem.base_pairs): 
+		for bp_idx, bp in enumerate(stem.base_pairs): 
 			# need to compute some offet? ...
 			print "orientation is ", stem.coordinate_frame.orientation
 			y_offset = bp_idx * self.bp_offset_height * stem.coordinate_frame.orientation
-			self.draw_bp( bp1, bp2, (x_offset, y + y_offset) )
+			
+			#self.draw_bp( bp.nt1, bp.nt2, (x_offset, y + y_offset) )
+			self.draw_bp( bp.nt1, bp.nt2, (bp.nt1.x, bp.nt1.y) )
 
 	def draw_apical_loop( self, apical_loop ):
 		"""
@@ -153,12 +155,20 @@ class Canvas:
 		x1, y1 = apical_loop.coordinate_frame.position.x,  apical_loop.coordinate_frame.position.y
 		x2, y2 = apical_loop.coordinate_frame.position2.x, apical_loop.coordinate_frame.position2.y
 		#print "From ", x1, y1, "to", x2, y2
-		for loop_idx, loop_nt in enumerate(apical_loop.numbers):
+		
+		# AMW TEMP: we are right now moving towards a system where a loop already knows its position(s)
+		# per nucleotide but we aren't there yet. So for now, note that loop_nt is suddenly a key to a dict
+		# of Nucleotides -- not a number.
+		#for loop_idx, loop_nt in enumerate(apical_loop.numbers):
+		for loop_idx, loop_nt in enumerate(apical_loop.nucleotides.keys()):
 			fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( apical_loop.numbers ))
 			# Here's a good example of an apical-junction deviation.
 			[x, y] = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop )
-			self.draw_nt(apical_loop.sequence[loop_idx], (x, y))
 			
+			# PART OF TRANSITION -- WILL BE BAD RIGHT NOW.
+			#self.draw_nt(apical_loop.nucleotides[loop_nt], (x, y))
+			self.draw_nt(apical_loop.nucleotides[loop_nt], (apical_loop.nucleotides[loop_nt].x, apical_loop.nucleotides[loop_nt].y))
+
 			# When stems have 'orientation' draw these 'away from' stem
 			num = apical_loop.numbers[loop_idx]
 			if num % 5 == 0: self.draw_text( num, (x, y+10), color(apical_loop.sequence[loop_idx]) )
@@ -168,14 +178,21 @@ class Canvas:
 		x1, y1 = junction_loop.coordinate_frame.position.x,  junction_loop.coordinate_frame.position.y
 		x2, y2 = junction_loop.coordinate_frame.position2.x, junction_loop.coordinate_frame.position2.y
 		
-		for loop_idx, loop_nt in enumerate(junction_loop.numbers):
+	# AMW TEMP: we are right now moving towards a system where a loop already knows its position(s)
+		# per nucleotide but we aren't there yet. So for now, note that loop_nt is suddenly a key to a dict
+		# of Nucleotides -- not a number.
+		#for loop_idx, loop_nt in enumerate(junction_loop.numbers):
+		for loop_idx, loop_nt in enumerate(junction_loop.nucleotides.keys()):
 			# This fraction goes 0, 0.25, 0.5, 0.75
 			# We need something more aggressive, esp. due to character alignment.
 			fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( junction_loop.numbers ))
 			x = interpolate(x1, x2, fraction_done_with_loop )
 			y = interpolate(y1, y2, fraction_done_with_loop )
-			self.draw_nt(junction_loop.sequence[loop_idx], (x,-10))
 			
+			# PART OF TRANSITION -- WILL BE BAD RIGHT NOW.		
+			#self.draw_nt(junction_loop.nucleotides[loop_nt], (x,-10))
+			self.draw_nt(junction_loop.nucleotides[loop_nt], (junction_loop.nucleotides[loop_nt].x,junction_loop.nucleotides[loop_nt].y))
+
 			# When stems have 'orientation' draw these away in the direction 
 			# perpendicular to the vector between the stems I guess.
 			num = junction_loop.numbers[loop_idx]

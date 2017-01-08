@@ -6,6 +6,7 @@ from loop import Loop
 from canvas import Canvas
 from util import get_stems, flatten, consecutive_segments, color, seq_for
 import numpy as np
+import math
 
 # test
 #from util import loop_interpolate
@@ -108,7 +109,7 @@ def score( canvas ):
 	# 1. Nucleotides should be a particular distance from what's adjacent to them in sequence.
 	for seqpos in canvas.nucleotides.keys():
 		if seqpos + 1 in canvas.nucleotides.keys():
-			score += harmonic_penalty( distance( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1], NT_DISTANCE, spring_constant ) )
+			score += harmonic_penalty( distance( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1] ), NT_DISTANCE, spring_constant )
 
 	return score
 
@@ -143,6 +144,7 @@ def mc( canvas ):
 			# accept
 			print "Accepted perturbation from %f to %f." % ( old_score, new_score )
 			canvas = new_canvas
+
 		else:
 			print "Rejected perturbation from %f to %f." % ( old_score, new_score )
 	return canvas
@@ -178,10 +180,12 @@ if __name__=="__main__":
 	# Also, how is the API user really going to know?
 	# You'd imagine they'd actually want to set it based on
 	# labels containing residues or something...
-	canvas.set_stems_coaxial( 0, 1 )
+	#canvas.set_stems_coaxial( 0, 1 )
 
 	# We have to do this before adding any loops because (initial) positions
 	# are calculated after addition time.
 	for loop in loops: canvas.add_loop( loop )
-
+	
+	mc(canvas)
+	
 	canvas.render()
