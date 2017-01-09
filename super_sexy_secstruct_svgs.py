@@ -153,11 +153,41 @@ def score( canvas ):
 		for seqpos2 in canvas.nucleotides.keys():
 			if seqpos1 >= seqpos2: continue
 			if distance( canvas.nucleotides[seqpos1], canvas.nucleotides[seqpos2] ) < 15: score += 100
-			
+	
+	def closer_than( val1, val2, diff ): return  val2 - val1 < diff or val1 - val2 < diff
+
+	# 2b. Depending on base pair width, it's possible that the 'best' orientation for two stacks is
+	# for them to be overlapping...
+	#  nt --- nt
+	#  |   nt |-- nt
+	#  nt -|- nt  |
+	#  |   nt |-- nt
+	# so, penalize this ( 'between two bp'ed nts' penalized like hitting a nt )
+	for seqpos in canvas.nucleotides.keys():
+		for stem in canvas.stems:
+			for bp in stem.base_pairs:
+				if canvas.nucleotides[seqpos] == bp.nt1 or canvas.nucleotides[seqpos] == bp.nt2:
+					continue
+				# if nt in question is 'in between' nt1 and nt2. how to judge?
+				if canvas.nucleotides[seqpos].x > bp.nt1.x and canvas.nucleotides[seqpos].x < bp.nt2.x \
+					and closer_than( canvas.nucleotides[seqpos].y, bp.nt1.y, canvas.bp_offset_height ):
+					score += 100
+
 	# 3. Stems should be straight and vertical.
 	### Resolved via kinematics?
 
 	# 4. Coaxial stacks, where known, should be colinear.
+	for idx1, idx2 in canvas.list_of_coaxialities:
+		# idx1 and idx2 are coaxial stems.
+		# Any two BPs from these stems should do, but -- because I have no idea
+		# how we intend to handle 'alternate-order' stacks (where the first nt in a bp
+		# is stacked on the second nt in another), compare either direction.
+		bp1 = canvas.stems[idx1].base_pairs[0]
+		bp2 = canvas.stems[idx2].base_pairs[0]
+		penalty1 = harmonic_penalty( bp1.nt1.x - bp2.nt1.x, 0, 1 ) + harmonic_penalty( bp1.nt2.x - bp2.nt2.x, 0, 1 )
+		penalty2 = harmonic_penalty( bp1.nt1.x - bp2.nt2.x, 0, 1 ) + harmonic_penalty( bp1.nt2.x - bp2.nt1.x, 0, 1 )
+		score += min( penalty1, penalty2 )
+
 
 	# 5. Apical loops should be symmetrical and near a circular path.
 	for loop in canvas.loops:
@@ -252,7 +282,7 @@ if __name__=="__main__":
 	# Also, how is the API user really going to know?
 	# You'd imagine they'd actually want to set it based on
 	# labels containing residues or something...
-	#canvas.set_stems_coaxial( 0, 1 )
+	canvas.set_stems_coaxial( 0, 1 )
 
 
 

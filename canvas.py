@@ -18,6 +18,7 @@ class Canvas:
 		self.stems = []
 		self.loops = []
 		self.nucleotides = {}
+		self.list_of_coaxialities = []
 
 	#def copyctor( self, orig ):
 	#	self.dwg = orig.dwg
@@ -175,6 +176,8 @@ class Canvas:
 		Especially with nonlocal coaxialities, as it were, these matter quite a lot. Not
 		bothering yet.
 		"""
+
+		self.list_of_coaxialities.append( [idx1, idx2] )
 
 		# Uh oh! We had committed to this "single coordinate frame per stem" idea. But now we really want
 		# to interact with nucleotides directly!
