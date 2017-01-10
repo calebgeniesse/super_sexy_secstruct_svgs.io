@@ -35,9 +35,6 @@ class Canvas:
 		self.dwg.add(self.dwg.text(text, insert=loc, fill=color ) )
 	
 	def draw_line( self, loc1, loc2, stroke=svgwrite.rgb(10, 10, 16, '%') ):
-		""" 
-		Only supports black for now.
-		"""
 		self.dwg.add(self.dwg.line(loc1, loc2, stroke=stroke ) )
 
 	def draw_nt( self, nt ):
@@ -55,9 +52,24 @@ class Canvas:
 		self.draw_nt( bp2 )
 		# Assumed horizontal. Don't have a good idea of how to figure out this line otherwise.
 		# Probably draw about 80% of (x1,y1)-(x2,y2)
-		self.draw_line( (bp1.x + 10, bp1.y - self.font_height_offset), 
-						(bp1.x + 25, bp1.y - self.font_height_offset) )
 		
+		center1 = [bp1.x,bp1.y]
+		center2 = [bp2.x,bp2.y]
+		
+		# Aim is 80%
+		frac = 0.8
+		f1 = ( 1.0 + frac ) / 2
+		f2 = ( 1.0 - frac ) / 2
+
+		#beg = [ f1 * center1[0] + f2 * center2[0], f1 * center1[1] + f2 * center2[1] ]
+		#end = [ f2 * center1[0] + f1 * center2[0], f2 * center1[1] + f1 * center2[1] ]
+		beg = [ center1[0] + f1*(center2[0]-center1[0]), center1[1] + f1*(center2[1]-center1[1]) ]
+		end = [ center1[0] + f2*(center2[0]-center1[0]), center1[1] + f2*(center2[1]-center1[1]) ]
+
+		#self.draw_line( (bp1.x + 10, bp1.y - self.font_height_offset), 
+		#				(bp1.x + 25, bp1.y - self.font_height_offset) )
+		self.draw_line( beg, end )
+				
 	def add_stem( self, stem ):
 		"""
 		We override the default coordinate frame with one that uses a little more information
@@ -98,17 +110,20 @@ class Canvas:
 			# Extra for alignment (may change with font size?)
 			loop.coordinate_frame.position.y += 2
 			
-			# Set end to start, but add bp_offset_width
+			# Set end to start, but add bp_offset_width DEPENDING on stem orientation
 			loop.coordinate_frame.position2.x  = loop.coordinate_frame.position.x
-			loop.coordinate_frame.position2.x += self.bp_offset_width
+			loop.coordinate_frame.position2.x += self.bp_offset_width * loop.stem1.coordinate_frame.orientation
 			loop.coordinate_frame.position2.y  = loop.coordinate_frame.position.y
 
 			x1, y1 = loop.coordinate_frame.position.x,  loop.coordinate_frame.position.y
 			x2, y2 = loop.coordinate_frame.position2.x, loop.coordinate_frame.position2.y
 			for loop_idx, loop_nt in enumerate(loop.nucleotides.keys()):
+				loop_idx = loop_nt - min(loop.nucleotides.keys())
 				fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( loop.numbers ))
+				print "#### Fraction done with loop is: ", fraction_done_with_loop
 				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop )
-			
+				print "#### Placing loop nucleotide ", loop.nucleotides[loop_nt].name, loop_idx, " at ", loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y
+
 		elif loop.tail:
 			"""
 			We can kind of make some choices here. When stem orientation is variable
@@ -156,12 +171,18 @@ class Canvas:
 			# of Nucleotides -- not a number.
 			#for loop_idx, loop_nt in enumerate(junction_loop.numbers):
 			for loop_idx, loop_nt in enumerate(loop.nucleotides.keys()):
-				# This fraction goes 0, 0.25, 0.5, 0.75
-				# We need something more aggressive, esp. due to character alignment.
+
+				# silly update.........
+				loop_idx = loop_nt - min(loop.nucleotides.keys())
+
 				fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( loop.numbers ))
-				loop.nucleotides[loop_nt].x = interpolate(x1, x2, fraction_done_with_loop )
-				loop.nucleotides[loop_nt].y = interpolate(y1, y2, fraction_done_with_loop )
-			
+				# What if we could loop_interpolate 180 degrees for a straight thing? Maybe this is possible!
+				#loop.nucleotides[loop_nt].x = interpolate(x1, x2, fraction_done_with_loop )
+				#loop.nucleotides[loop_nt].y = interpolate(y1, y2, fraction_done_with_loop )
+				print "#### Fraction done with loop is: ", fraction_done_with_loop
+				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop )
+				print "#### Placing loop nucleotide ", loop.nucleotides[loop_nt].name, loop_idx, " at ", loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y
+
 		self.loops.append(loop)
 		for seqpos in loop.nucleotides.keys(): self.nucleotides[ seqpos ] = loop.nucleotides[ seqpos ]
 
@@ -190,7 +211,7 @@ class Canvas:
 		cf2.orientation = -1 * cf1.orientation
 
 		cf2.position.y = cf1.position.y + cf2.orientation * ( self.bp_offset_height + 1 )
-		cf2.position.x = cf1.position.x # coaxiality
+		cf2.position.x = cf1.position.x + self.bp_offset_width # coaxiality, keeping in mind the flipped 'sense'
 
 		# We can learn a lot from add_stem...
 		x_offset = cf2.position.x
@@ -201,10 +222,25 @@ class Canvas:
 			y_offset = bp_idx * self.bp_offset_height * self.stems[idx2].coordinate_frame.orientation
 			bp.nt1.x = x_offset
 			bp.nt1.y = y + y_offset
-			bp.nt2.x = x_offset + self.bp_offset_width
+			bp.nt2.x = x_offset + self.bp_offset_width * cf2.orientation # Flip for flipped.
 			bp.nt2.y = y + y_offset
 
-
+		# Oh! Update any dependent loops!
+		for loop in self.loops:
+			if self.stems[idx2] == loop.stem1 and loop.stem2 == None:
+				# apical
+				# at some point reduce duplication wtih add loop!!!!
+				loop.coordinate_frame.position.x  = loop.stem1.coordinate_frame.position.x
+				loop.coordinate_frame.position.y  = loop.stem1.coordinate_frame.position.y
+				# Offset for stem length
+				loop.coordinate_frame.position.y += len(loop.stem1.base_pairs) * self.bp_offset_height - self.bp_offset_height
+				# Extra for alignment (may change with font size?)
+				loop.coordinate_frame.position.y += 2
+			
+				# Set end to start, but add bp_offset_width DEPENDING on stem orientation
+				loop.coordinate_frame.position2.x  = loop.coordinate_frame.position.x
+				loop.coordinate_frame.position2.x += self.bp_offset_width * loop.stem1.coordinate_frame.orientation
+				loop.coordinate_frame.position2.y  = loop.coordinate_frame.position.y
 
 	def draw_stem( self, stem ):
 		# draw basepairs
@@ -216,7 +252,7 @@ class Canvas:
 			y_offset = bp_idx * self.bp_offset_height * stem.coordinate_frame.orientation
 			
 			self.draw_bp( bp.nt1, bp.nt2 )
-			
+						
 	def draw_apical_loop( self, apical_loop ):
 		for loop_idx, loop_nt in enumerate(apical_loop.nucleotides.keys()):
 			self.draw_nt(apical_loop.nucleotides[loop_nt])
@@ -232,8 +268,8 @@ class Canvas:
 		5-6 px up and right of (x,y) ) and draw about 80% of that vector.
 		"""
 
-		center1 = [ self.nucleotides[ pos1 ].x + 5, self.nucleotides[ pos1 ].y - 5 ]
-		center2 = [ self.nucleotides[ pos2 ].x + 5, self.nucleotides[ pos2 ].y - 5 ]
+		center1 = [ self.nucleotides[ pos1 ].x + self.font_height_offset, self.nucleotides[ pos1 ].y - self.font_height_offset ]
+		center2 = [ self.nucleotides[ pos2 ].x + self.font_height_offset, self.nucleotides[ pos2 ].y - self.font_height_offset ]
 
 		#beg = [ 0.9 * center1[0] + 0.1 * center2[0], 0.9 * center1[1] + 0.1 * center2[1] ]
 		#end = [ 0.1 * center1[0] + 0.9 * center2[0], 0.1 * center1[1] + 0.9 * center2[1] ]
@@ -243,8 +279,10 @@ class Canvas:
 		f1 = ( 1.0 + frac ) / 2
 		f2 = ( 1.0 - frac ) / 2
 
-		beg = [ f1 * center1[0] + f2 * center2[0], f1 * center1[1] + f2 * center2[1] ]
-		end = [ f2 * center1[0] + f1 * center2[0], f2 * center1[1] + f1 * center2[1] ]
+		#beg = [ f1 * center1[0] + f2 * center2[0], f1 * center1[1] + f2 * center2[1] ]
+		#end = [ f2 * center1[0] + f1 * center2[0], f2 * center1[1] + f1 * center2[1] ]
+		beg = [ center1[0] + f1*(center2[0]-center1[0]), center1[1] + f1*(center2[1]-center1[1]) ]
+		end = [ center1[0] + f2*(center2[0]-center1[0]), center1[1] + f2*(center2[1]-center1[1]) ]
 
 		self.draw_line( beg, end, 'gray' )
 

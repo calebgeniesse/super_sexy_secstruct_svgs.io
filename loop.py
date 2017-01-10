@@ -13,6 +13,8 @@ class Loop:
 		self.numbers = numbers
 
 		self.nucleotides = { numbers[i]: Nucleotide( sequence[i], numbers[i] ) for i in xrange(len(sequence)) }
+		for loop_idx, loop_nt in enumerate(self.nucleotides.keys()):
+			print "foo!", loop_idx, loop_nt
 
 		self.stem1 = stem1
 		self.apical = apical

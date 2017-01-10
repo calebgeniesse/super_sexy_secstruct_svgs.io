@@ -148,6 +148,7 @@ def loop_interpolate( x1,y1,x2,y2, fraction_of_circle, fraction_done_with_loop )
 
 	# Nonsensically, loops are going in the wrong direction.
 	# Equivalent to careful debugging of below is just taking the complement.
+
 	fraction_done_with_loop = 1 - fraction_done_with_loop
 
 	mMCB = (360-fraction_of_circle*360)/2
@@ -163,6 +164,8 @@ def loop_interpolate( x1,y1,x2,y2, fraction_of_circle, fraction_done_with_loop )
 	unit = None
 	if y1 == y2:
 		unit = [0,1]
+	elif x1 == x2:
+		unit = [1,0]
 	else:
 		unit = float(-1)/float((y2-y1)/(x2-x1))
 	xC,yC = [ (unit[0] * mMC) + (x1+x2)/2, (unit[1] * mMC) + (y1+y2)/2]
@@ -174,6 +177,6 @@ def loop_interpolate( x1,y1,x2,y2, fraction_of_circle, fraction_done_with_loop )
 	# a is angle from horizontal right
 	# AMW TODO: for slightly nudged stems, this won't be -90
 	a = -90 + mMCB + mBCD
-	print "%0.2d %0.2d" % (xC + r * math.cos(math.radians(a)), yC + r * math.sin(math.radians(a)))
+	print "%0.2f %0.2f" % (xC + r * math.cos(math.radians(a)), yC + r * math.sin(math.radians(a)))
 	return [ xC + r * math.cos(math.radians(a)), yC + r * math.sin(math.radians(a))]
 

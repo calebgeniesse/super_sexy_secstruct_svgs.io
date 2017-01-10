@@ -115,6 +115,10 @@ def score( canvas ):
 	
 	def angle( nt1, nt2, nt3 ):
 		""" Math looks right on this one but I am getting the supplement. So, fixing..."""
+		if vector( nt1, nt2 ) == [0,0]:
+			print "nt1", nt1.seqpos, " at ", nt1.x, nt1.y, " is at the same position as nt2", nt2.seqpos
+		if vector( nt2, nt3 ) == [0,0]:
+			print "nt2", nt2.seqpos, " at ", nt2.x, nt2.y, " is at the same position as nt3", nt3.seqpos
 		return 180.0 - math.degrees( math.acos( dot( vector( nt1, nt2 ), vector( nt2, nt3 ) ) / ( mod( vector( nt1, nt2 ) ) * mod( vector( nt2, nt3 ) ) ) ) )
 
 	def harmonic_penalty( dist, ideal, spring_constant ):
@@ -135,7 +139,7 @@ def score( canvas ):
 	for seqpos in canvas.nucleotides.keys():
 		if seqpos + 1 in canvas.nucleotides.keys():
 			d = distance( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1] )
-			print "Distance between %d and %d is %f" % (seqpos, seqpos+1, d)
+			#print "Distance between %d and %d is %f" % (seqpos, seqpos+1, d)
 			#score += harmonic_penalty( d, NT_DISTANCE, spring_constant )
 			score += flat_harmonic_penalty( d, NT_MIN_DISTANCE, NT_MAX_DISTANCE, spring_constant )
 
@@ -144,7 +148,7 @@ def score( canvas ):
 		if seqpos + 1 in canvas.nucleotides.keys():
 			if seqpos + 2 in canvas.nucleotides.keys():
 				a = angle( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1], canvas.nucleotides[seqpos+2] )
-				print "Angle between %d and %d and %d is %f" % (seqpos, seqpos+1, seqpos+2, a)
+				#print "Angle between %d and %d and %d is %f" % (seqpos, seqpos+1, seqpos+2, a)
 				# Don't worry about angular harmonic func at the moment.
 				score += flat_harmonic_penalty( a, NT_MIN_ANGLE, NT_MAX_ANGLE, angular_spring_constant )
 
@@ -170,8 +174,17 @@ def score( canvas ):
 					continue
 				# if nt in question is 'in between' nt1 and nt2. how to judge?
 				if canvas.nucleotides[seqpos].x > bp.nt1.x and canvas.nucleotides[seqpos].x < bp.nt2.x \
-					and closer_than( canvas.nucleotides[seqpos].y, bp.nt1.y, canvas.bp_offset_height ):
+					and closer_than( canvas.nucleotides[seqpos].y, bp.nt1.y, canvas.bp_offset_height*0.8 ):
 					score += 100
+			
+			# Look at pairs of adjacent nts in stem
+			for seqpos1 in stem.nucleotides.keys():
+				if seqpos1 + 1 in stem.nucleotides.keys():
+					nt1 = stem.nucleotides[ seqpos1 ]
+					nt2 = stem.nucleotides[ seqpos1 + 1 ]
+					if canvas.nucleotides[seqpos].y > nt1.y and canvas.nucleotides[seqpos].y < nt2.y \
+						and closer_than( canvas.nucleotides[seqpos].x, nt1.x, canvas.bp_offset_width*0.8 ):
+						score += 100
 
 	# 3. Stems should be straight and vertical.
 	### Resolved via kinematics?
@@ -237,7 +250,7 @@ def mc( canvas ):
 	This is an in-progress framework for doing MCMC simulations on a canvas.
 	The idea is that you score NT configurations, update, etc.
 	"""
-	cycles = 1000
+	cycles = 1
 	for x in xrange(cycles):
 		old_score = score(canvas)
 		new_canvas = perturb(canvas)
@@ -282,7 +295,7 @@ if __name__=="__main__":
 	# Also, how is the API user really going to know?
 	# You'd imagine they'd actually want to set it based on
 	# labels containing residues or something...
-	canvas.set_stems_coaxial( 0, 1 )
+	#canvas.set_stems_coaxial( 0, 1 )
 
 
 
