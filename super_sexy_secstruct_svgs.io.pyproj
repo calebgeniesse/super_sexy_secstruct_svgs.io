@@ -26,6 +26,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="canvas.py" />
+    <Compile Include="base_pair.py" />
+    <Compile Include="test_canvas.py" />
+    <Compile Include="nucleotide.py" />
+    <Compile Include="coordinate_frame.py" />
     <Compile Include="loop.py" />
     <Compile Include="stem.py" />
     <Compile Include="super_sexy_secstruct_svgs.py" />

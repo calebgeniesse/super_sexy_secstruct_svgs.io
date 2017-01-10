@@ -1,2 +1,5 @@
 *.svg
 *.pyc
+*.vs/*
+*.pyproj
+*.sln
