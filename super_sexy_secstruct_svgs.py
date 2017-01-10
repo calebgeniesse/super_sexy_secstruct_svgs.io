@@ -237,11 +237,11 @@ def perturb_loops( canvas ):
 
 			# Each of the other nts in the loop do a proportion of the same motion
 			# depending on how far away
-			for seqpos2 in loop.nucleotides.keys():
+			for seqpos2, nt2 in loop.nucleotides.iteritems():
 				if seqpos2 == seqpos: continue
 				prefactor =  0.8 / abs( seqpos - seqpos2 ) 
-				loop.nucleotides[seqpos2].x += prefactor * dx
-				loop.nucleotides[seqpos2].y += prefactor * dy
+				nt2.x += prefactor * dx
+				nt2.y += prefactor * dy
 			
 	return new_canvas
 
@@ -271,11 +271,11 @@ def perturb( canvas ):
 		# Find any stems this seqpos might be part of...
 		for stem in new_canvas.stems:
 			if seqpos in stem.nucleotides.keys():
-				for pos in stem.nucleotides.keys(): 
+				for pos, other_nt in stem.nucleotides.iteritems(): 
 					if pos == seqpos: continue
 					moved_this_turn[ pos ] = True
-					new_canvas.nucleotides[pos].x += dx
-					new_canvas.nucleotides[pos].y += dy
+					other_nt.x += dx
+					other_nt.y += dy
 
 	return new_canvas
 
