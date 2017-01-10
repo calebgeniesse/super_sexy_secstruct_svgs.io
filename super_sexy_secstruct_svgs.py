@@ -284,7 +284,7 @@ def metropolis( new, old, temp ):
 
 def mc_loops( canvas ):
 	
-	cycles = 1
+	cycles = 1#000
 	for x in xrange(cycles):
 		old_score = score(canvas)
 		new_canvas = perturb_loops(canvas)
@@ -303,7 +303,7 @@ def mc( canvas ):
 	This is an in-progress framework for doing MCMC simulations on a canvas.
 	The idea is that you score NT configurations, update, etc.
 	"""
-	cycles = 1
+	cycles = 1#000
 	for x in xrange(cycles):
 		old_score = score(canvas)
 		new_canvas = perturb(canvas)
@@ -348,7 +348,7 @@ if __name__=="__main__":
 	# Also, how is the API user really going to know?
 	# You'd imagine they'd actually want to set it based on
 	# labels containing residues or something...
-	canvas.set_stems_coaxial( 0, 1 )
+	#canvas.set_stems_coaxial( 0, 1 )
 
 
 

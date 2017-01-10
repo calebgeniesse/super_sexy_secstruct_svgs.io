@@ -119,6 +119,12 @@ class Canvas:
 			loop.coordinate_frame.position2.x += self.bp_offset_width * loop.stem1.coordinate_frame.orientation
 			loop.coordinate_frame.position2.y  = loop.coordinate_frame.position.y
 
+			# Gentler arc for greater loop separations 
+			# 0.75 for bp_offset_width, i.e. apicals
+			# scale down to 0.3 for stem_offset_width 
+			salient_difference = max( abs(loop.coordinate_frame.position.x - loop.coordinate_frame.position2.x), abs(loop.coordinate_frame.position.y - loop.coordinate_frame.position2.y) )
+			total_loop_fraction = 0.75 - 0.45 * (salient_difference-self.bp_offset_width) / (self.stem_offset_width-self.bp_offset_width) 
+
 			x1, y1 = loop.coordinate_frame.position.x,  loop.coordinate_frame.position.y
 			x2, y2 = loop.coordinate_frame.position2.x, loop.coordinate_frame.position2.y
 			for loop_idx, loop_nt in enumerate(loop.nucleotides.keys()):
@@ -130,7 +136,7 @@ class Canvas:
 				add_angle = 180 if loop.stem1.coordinate_frame.orientation == -1 else 0
 
 				print "#### Fraction done with loop is: ", fraction_done_with_loop
-				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop, add_angle=add_angle )
+				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, total_loop_fraction, fraction_done_with_loop, add_angle=add_angle )
 				print "#### Placing loop nucleotide ", loop.nucleotides[loop_nt].name, loop_idx, " at ", loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y
 
 		elif loop.tail:
@@ -163,26 +169,38 @@ class Canvas:
 			stem1 to the left side of stem2. Note that we will really have to think
 			in terms of the positions of individual NTs eventually.
 			"""
-			loop.coordinate_frame.position.x  = loop.stem1.coordinate_frame.position.x
-			loop.coordinate_frame.position.x += self.bp_offset_width
-			loop.coordinate_frame.position.y  = loop.stem1.coordinate_frame.position.y
-			loop.coordinate_frame.position.y -= 10
 
-			loop.coordinate_frame.position2.x  = loop.stem2.coordinate_frame.position.x
-			loop.coordinate_frame.position2.y  = loop.stem2.coordinate_frame.position.y
-			loop.coordinate_frame.position2.y -= 10
+			# Above-described algorithm sucks. Let's do something better:
+			# instead of using stem coordinate frames, use the bonded NT.
+			loop.coordinate_frame.position.x = loop.stem1.nucleotides[min(loop.numbers)-1].x
+			loop.coordinate_frame.position.y = loop.stem1.nucleotides[min(loop.numbers)-1].y
+			loop.coordinate_frame.position2.x = loop.stem2.nucleotides[max(loop.numbers)+1].x
+			loop.coordinate_frame.position2.y = loop.stem2.nucleotides[max(loop.numbers)+1].y
+
+			if loop.stem1.coordinate_frame.orientation == 1 and loop.stem2.coordinate_frame.orientation == 1:
+				loop.coordinate_frame.position.y -= self.bp_offset_height * 6
+				loop.coordinate_frame.position2.y -= self.bp_offset_height * 6
+			elif loop.stem1.coordinate_frame.orientation == -1 and loop.stem2.coordinate_frame.orientation == -1:
+				loop.coordinate_frame.position.y += self.bp_offset_height * 2
+				loop.coordinate_frame.position2.y += self.bp_offset_height * 2
 
 			x1, y1 = loop.coordinate_frame.position.x,  loop.coordinate_frame.position.y
 			x2, y2 = loop.coordinate_frame.position2.x, loop.coordinate_frame.position2.y
+			
+			# Gentler arc for greater loop separations 
+			# 0.75 for bp_offset_width, i.e. apicals
+			# scale down to 0.3 for stem_offset_width 
+			salient_difference = max( abs(x1-x2), abs(y1-y2) )
+			total_loop_fraction = 0.75 - 0.45 * (salient_difference-self.bp_offset_width) / (self.stem_offset_width-self.bp_offset_width) 
 		
 			# AMW TEMP: we are right now moving towards a system where a loop already knows its position(s)
 			# per nucleotide but we aren't there yet. So for now, note that loop_nt is suddenly a key to a dict
 			# of Nucleotides -- not a number.
-			#for loop_idx, loop_nt in enumerate(junction_loop.numbers):
-			for loop_idx, loop_nt in enumerate(loop.nucleotides.keys()):
+			for loop_key, loop_nt in loop.nucleotides.iteritems():
+				#loop_idx, loop_nt in enumerate(loop.nucleotides.keys()):
 
 				# silly update.........
-				loop_idx = loop_nt - min(loop.nucleotides.keys())
+				loop_idx = loop_key - min(loop.nucleotides.keys())
 
 				fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( loop.numbers ))
 				# What if we could loop_interpolate 180 degrees for a straight thing? Maybe this is possible!
@@ -191,17 +209,23 @@ class Canvas:
 				# + to - means +90
 				# - to + means +270 
 				add_angle = 0
+				loop_sense = 1
 				if loop.stem1.coordinate_frame.orientation == -1 and loop.stem2.coordinate_frame.orientation == 1:
 					add_angle = 90
 				elif loop.stem1.coordinate_frame.orientation == 1 and loop.stem2.coordinate_frame.orientation == -1:
 					add_angle = 270
+				elif loop.stem1.coordinate_frame.orientation == 1 and loop.stem2.coordinate_frame.orientation == 1:
+					add_angle = 0
+					loop_sense = -1 # clockwise, not ccw
+				else: # -1, -1
+					add_angle = 180
 
 				print "#### Fraction done with loop is: ", fraction_done_with_loop
-				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop, add_angle=add_angle )
-				print "#### Placing loop nucleotide ", loop.nucleotides[loop_nt].name, loop_idx, " at ", loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y
+				loop_nt.x, loop_nt.y = loop_interpolate( x1,y1,x2,y2, total_loop_fraction, fraction_done_with_loop, add_angle=add_angle, loop_sense=loop_sense )
+				print "#### Placing loop nucleotide ", loop_nt.name, loop_idx, " at ", loop_nt.x, loop_nt.y
 
 		self.loops.append(loop)
-		for seqpos in loop.nucleotides.keys(): self.nucleotides[ seqpos ] = loop.nucleotides[ seqpos ]
+		for seqpos, loop_nt in loop.nucleotides.iteritems(): self.nucleotides[ seqpos ] = loop_nt
 
 
 	def set_stems_coaxial( self, idx1, idx2 ):
@@ -275,12 +299,12 @@ class Canvas:
 			self.draw_bp( bp.nt1, bp.nt2 )
 						
 	def draw_apical_loop( self, apical_loop ):
-		for loop_idx, loop_nt in enumerate(apical_loop.nucleotides.keys()):
-			self.draw_nt(apical_loop.nucleotides[loop_nt])
+		for loop_key, loop_nt in apical_loop.nucleotides.iteritems():
+			self.draw_nt(loop_nt)
 			
 	def draw_junction_loop( self, junction_loop ):
-		for loop_idx, loop_nt in enumerate(junction_loop.nucleotides.keys()):
-			self.draw_nt(junction_loop.nucleotides[loop_nt])
+		for loop_key, loop_nt in junction_loop.nucleotides.iteritems():
+			self.draw_nt(loop_nt)
 			
 	def draw_sequence_line( self, pos1, pos2 ):
 		"""
