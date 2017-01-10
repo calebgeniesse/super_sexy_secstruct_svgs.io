@@ -132,7 +132,7 @@ def get_stems( line, sequence_for_fasta ):
 		stems.append( stem_res )
 	return stems
 
-def loop_interpolate( x1,y1,x2,y2, fraction_of_circle, fraction_done_with_loop ):
+def loop_interpolate( x1,y1,x2,y2, fraction_of_circle, fraction_done_with_loop, add_angle=0 ):
 	"""
 	Suppose (x1,y1) and (x2,y2) are two points separated by fraction_of_circle of
 	arc. Then, return points fraction_done_with_loop along that arc between those
@@ -176,7 +176,8 @@ def loop_interpolate( x1,y1,x2,y2, fraction_of_circle, fraction_done_with_loop )
 	# yC + r * sin a
 	# a is angle from horizontal right
 	# AMW TODO: for slightly nudged stems, this won't be -90
-	a = -90 + mMCB + mBCD
+	# Add add_angle, which is 180 for flipped stems
+	a = -90 + add_angle + mMCB + mBCD
 	print "%0.2f %0.2f" % (xC + r * math.cos(math.radians(a)), yC + r * math.sin(math.radians(a)))
 	return [ xC + r * math.cos(math.radians(a)), yC + r * math.sin(math.radians(a))]
 

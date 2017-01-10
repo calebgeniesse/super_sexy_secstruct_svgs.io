@@ -284,7 +284,7 @@ def metropolis( new, old, temp ):
 
 def mc_loops( canvas ):
 	
-	cycles = 1000
+	cycles = 1
 	for x in xrange(cycles):
 		old_score = score(canvas)
 		new_canvas = perturb_loops(canvas)

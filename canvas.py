@@ -106,9 +106,13 @@ class Canvas:
 			loop.coordinate_frame.position.x  = loop.stem1.coordinate_frame.position.x
 			loop.coordinate_frame.position.y  = loop.stem1.coordinate_frame.position.y
 			# Offset for stem length
-			loop.coordinate_frame.position.y += len(loop.stem1.base_pairs) * self.bp_offset_height - self.bp_offset_height
+			loop.coordinate_frame.position.y += loop.stem1.coordinate_frame.orientation * (len(loop.stem1.base_pairs) * self.bp_offset_height - self.bp_offset_height)
 			# Extra for alignment (may change with font size?)
-			loop.coordinate_frame.position.y += 2
+			loop.coordinate_frame.position.y += loop.stem1.coordinate_frame.orientation *2
+			# Extra for flipped loops( no explanation)
+			if loop.stem1.coordinate_frame.orientation == -1:
+				loop.coordinate_frame.position.y -= 2 * self.bp_offset_height
+
 			
 			# Set end to start, but add bp_offset_width DEPENDING on stem orientation
 			loop.coordinate_frame.position2.x  = loop.coordinate_frame.position.x
@@ -120,8 +124,13 @@ class Canvas:
 			for loop_idx, loop_nt in enumerate(loop.nucleotides.keys()):
 				loop_idx = loop_nt - min(loop.nucleotides.keys())
 				fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( loop.numbers ))
+				# Note: loop_interpolate really ought to think about stem orientation
+				# Maybe add 180 for flipped (-1) stems
+				# Note that here we're for sure apical
+				add_angle = 180 if loop.stem1.coordinate_frame.orientation == -1 else 0
+
 				print "#### Fraction done with loop is: ", fraction_done_with_loop
-				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop )
+				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop, add_angle=add_angle )
 				print "#### Placing loop nucleotide ", loop.nucleotides[loop_nt].name, loop_idx, " at ", loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y
 
 		elif loop.tail:
@@ -179,8 +188,16 @@ class Canvas:
 				# What if we could loop_interpolate 180 degrees for a straight thing? Maybe this is possible!
 				#loop.nucleotides[loop_nt].x = interpolate(x1, x2, fraction_done_with_loop )
 				#loop.nucleotides[loop_nt].y = interpolate(y1, y2, fraction_done_with_loop )
+				# + to - means +90
+				# - to + means +270 
+				add_angle = 0
+				if loop.stem1.coordinate_frame.orientation == -1 and loop.stem2.coordinate_frame.orientation == 1:
+					add_angle = 90
+				elif loop.stem1.coordinate_frame.orientation == 1 and loop.stem2.coordinate_frame.orientation == -1:
+					add_angle = 270
+
 				print "#### Fraction done with loop is: ", fraction_done_with_loop
-				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop )
+				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, 0.75, fraction_done_with_loop, add_angle=add_angle )
 				print "#### Placing loop nucleotide ", loop.nucleotides[loop_nt].name, loop_idx, " at ", loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y
 
 		self.loops.append(loop)
@@ -241,6 +258,10 @@ class Canvas:
 				loop.coordinate_frame.position2.x  = loop.coordinate_frame.position.x
 				loop.coordinate_frame.position2.x += self.bp_offset_width * loop.stem1.coordinate_frame.orientation
 				loop.coordinate_frame.position2.y  = loop.coordinate_frame.position.y
+
+				#Technically, handle tail here or have a better condition
+			else: # junction
+				pass
 
 	def draw_stem( self, stem ):
 		# draw basepairs
