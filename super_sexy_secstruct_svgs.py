@@ -209,6 +209,43 @@ def score( canvas ):
 
 	return score
 
+
+def perturb_loops( canvas ):
+	"""
+	Random perturbation to each NT. Gaussian?
+	Should ultimately have realistic kinematics... stems should move together, or at least BPs should.
+	"""
+
+	new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
+	
+	for loop in new_canvas.loops:
+
+		# Achieve OK stem kinematics by perturbing one nt in a stem and marking the whole thing as moved.
+		moved_this_turn = { seqpos: False for seqpos in loop.nucleotides.keys() }
+
+		for seqpos in loop.nucleotides.keys():
+			if moved_this_turn[ seqpos ]: continue
+
+			moved_this_turn[ seqpos ] = True
+			dx = np.random.normal(0,3)
+			dy = np.random.normal(0,3)
+		
+			#print "Moving nt %d from ( %f, %f )... " % ( seqpos, new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y ),
+			loop.nucleotides[seqpos].x += dx
+			loop.nucleotides[seqpos].y += dy
+			#print "... to ( %f, %f )!" % ( new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y )
+
+			# Each of the other nts in the loop do a proportion of the same motion
+			# depending on how far away
+			for seqpos2 in loop.nucleotides.keys():
+				if seqpos2 == seqpos: continue
+				prefactor =  0.8 / abs( seqpos - seqpos2 ) 
+				loop.nucleotides[seqpos].x += prefactor * dx
+				loop.nucleotides[seqpos].y += prefactor * dy
+			
+	return new_canvas
+
+
 def perturb( canvas ):
 	"""
 	Random perturbation to each NT. Gaussian?
@@ -244,6 +281,22 @@ def perturb( canvas ):
 
 def metropolis( new, old, temp ): 
 	return np.random.uniform() < math.exp( ( old - new ) / temp )
+
+def mc_loops( canvas ):
+	
+	cycles = 1000
+	for x in xrange(cycles):
+		old_score = score(canvas)
+		new_canvas = perturb_loops(canvas)
+		new_score = score(new_canvas)
+		if new_score < old_score or metropolis( new_score, old_score, temp=1 ):
+			# accept
+			print "Loop phase: Accepted perturbation from %f to %f." % ( old_score, new_score )
+			canvas = new_canvas
+
+		else:
+			print "Loop phase: Rejected perturbation from %f to %f." % ( old_score, new_score )
+	return canvas
 
 def mc( canvas ):
 	"""
@@ -303,6 +356,11 @@ if __name__=="__main__":
 	# are calculated after addition time.
 	for loop in loops: canvas.add_loop( loop )
 	
+
+	# Maybe a relaxation phase where we only move loops -- and move
+	# them in some sort of sensible synchrony -- is in order.
+	canvas = mc_loops( canvas )
+
 	canvas = mc(canvas)
 	
 	canvas.render()
