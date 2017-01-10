@@ -223,7 +223,7 @@ def perturb_loops( canvas ):
 		# Achieve OK stem kinematics by perturbing one nt in a stem and marking the whole thing as moved.
 		moved_this_turn = { seqpos: False for seqpos in loop.nucleotides.keys() }
 
-		for seqpos in loop.nucleotides.keys():
+		for seqpos, nt in loop.nucleotides.iteritems():
 			if moved_this_turn[ seqpos ]: continue
 
 			moved_this_turn[ seqpos ] = True
@@ -231,8 +231,8 @@ def perturb_loops( canvas ):
 			dy = np.random.normal(0,3)
 		
 			#print "Moving nt %d from ( %f, %f )... " % ( seqpos, new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y ),
-			loop.nucleotides[seqpos].x += dx
-			loop.nucleotides[seqpos].y += dy
+			nt.x += dx
+			nt.y += dy
 			#print "... to ( %f, %f )!" % ( new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y )
 
 			# Each of the other nts in the loop do a proportion of the same motion
@@ -240,8 +240,8 @@ def perturb_loops( canvas ):
 			for seqpos2 in loop.nucleotides.keys():
 				if seqpos2 == seqpos: continue
 				prefactor =  0.8 / abs( seqpos - seqpos2 ) 
-				loop.nucleotides[seqpos].x += prefactor * dx
-				loop.nucleotides[seqpos].y += prefactor * dy
+				loop.nucleotides[seqpos2].x += prefactor * dx
+				loop.nucleotides[seqpos2].y += prefactor * dy
 			
 	return new_canvas
 
@@ -256,7 +256,7 @@ def perturb( canvas ):
 	moved_this_turn = { seqpos: False for seqpos in canvas.nucleotides.keys() }
 
 	new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
-	for seqpos in new_canvas.nucleotides.keys():
+	for seqpos, nt in new_canvas.nucleotides.iteritems():
 		if moved_this_turn[ seqpos ]: continue
 
 		moved_this_turn[ seqpos ] = True
@@ -264,8 +264,8 @@ def perturb( canvas ):
 		dy = np.random.normal(0,3)
 		
 		#print "Moving nt %d from ( %f, %f )... " % ( seqpos, new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y ),
-		new_canvas.nucleotides[seqpos].x += dx
-		new_canvas.nucleotides[seqpos].y += dy
+		nt.x += dx
+		nt.y += dy
 		#print "... to ( %f, %f )!" % ( new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y )
 
 		# Find any stems this seqpos might be part of...
