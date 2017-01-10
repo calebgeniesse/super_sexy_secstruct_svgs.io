@@ -183,6 +183,12 @@ class Canvas:
 			elif loop.stem1.coordinate_frame.orientation == -1 and loop.stem2.coordinate_frame.orientation == -1:
 				loop.coordinate_frame.position.y += self.bp_offset_height * 2
 				loop.coordinate_frame.position2.y += self.bp_offset_height * 2
+			elif loop.stem1.coordinate_frame.orientation == 1 and loop.stem2.coordinate_frame.orientation == -1:
+				loop.coordinate_frame.position.x += self.bp_offset_width 
+				loop.coordinate_frame.position2.x += self.bp_offset_width 
+			else: # loop.stem1.coordinate_frame.orientation == -1 and loop.stem2.coordinate_frame.orientation == 1:
+				loop.coordinate_frame.position.x -= self.bp_offset_width
+				loop.coordinate_frame.position2.x -= self.bp_offset_width 
 
 			x1, y1 = loop.coordinate_frame.position.x,  loop.coordinate_frame.position.y
 			x2, y2 = loop.coordinate_frame.position2.x, loop.coordinate_frame.position2.y
