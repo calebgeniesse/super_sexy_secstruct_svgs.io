@@ -295,7 +295,7 @@ if __name__=="__main__":
 	# Also, how is the API user really going to know?
 	# You'd imagine they'd actually want to set it based on
 	# labels containing residues or something...
-	#canvas.set_stems_coaxial( 0, 1 )
+	canvas.set_stems_coaxial( 0, 1 )
 
 
 
