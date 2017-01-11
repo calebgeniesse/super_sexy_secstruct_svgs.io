@@ -172,10 +172,21 @@ class Canvas:
 
 			# Above-described algorithm sucks. Let's do something better:
 			# instead of using stem coordinate frames, use the bonded NT.
-			loop.coordinate_frame.position.x = loop.stem1.nucleotides[min(loop.numbers)-1].x
-			loop.coordinate_frame.position.y = loop.stem1.nucleotides[min(loop.numbers)-1].y
-			loop.coordinate_frame.position2.x = loop.stem2.nucleotides[max(loop.numbers)+1].x
-			loop.coordinate_frame.position2.y = loop.stem2.nucleotides[max(loop.numbers)+1].y
+			#print loop.stem1.nucleotides.keys()
+			#print loop.stem2.nucleotides.keys()
+			#print loop.numbers
+			# Goes from small to large whichever stem it is... hrm.
+			if min(loop.numbers)-1 in loop.stem1.nucleotides.keys():
+				loop.coordinate_frame.position.x = loop.stem1.nucleotides[min(loop.numbers)-1].x
+				loop.coordinate_frame.position.y = loop.stem1.nucleotides[min(loop.numbers)-1].y
+				loop.coordinate_frame.position2.x = loop.stem2.nucleotides[max(loop.numbers)+1].x
+				loop.coordinate_frame.position2.y = loop.stem2.nucleotides[max(loop.numbers)+1].y
+			else: # max(loop.numbers)+1 in loop.stem1.nucleotides.keys()
+				loop.coordinate_frame.position.x = loop.stem2.nucleotides[min(loop.numbers)-1].x
+				loop.coordinate_frame.position.y = loop.stem2.nucleotides[min(loop.numbers)-1].y
+				loop.coordinate_frame.position2.x = loop.stem1.nucleotides[max(loop.numbers)+1].x
+				loop.coordinate_frame.position2.y = loop.stem1.nucleotides[max(loop.numbers)+1].y
+
 
 			if loop.stem1.coordinate_frame.orientation == 1 and loop.stem2.coordinate_frame.orientation == 1:
 				loop.coordinate_frame.position.y -= self.bp_offset_height * 6

@@ -167,7 +167,9 @@ def loop_interpolate( x1,y1,x2,y2, fraction_of_circle, fraction_done_with_loop, 
 	elif x1 == x2:
 		unit = [1,0]
 	else:
-		unit = float(-1)/float((y2-y1)/(x2-x1))
+		print y2-y1
+		print x2-x1
+		unit = [1,float(-1)/float((y2-y1)/float(x2-x1))]
 	xC,yC = [ (unit[0] * mMC) + (x1+x2)/2, (unit[1] * mMC) + (y1+y2)/2]
 	print xC, yC
 

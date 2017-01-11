@@ -1,10 +1,10 @@
 import svgwrite
 
-import stem
-from stem import Stem
-from loop import Loop
-from canvas import Canvas
-from util import get_stems, flatten, consecutive_segments, color, seq_for
+import secstruct_svgs.stem
+from secstruct_svgs.stem import Stem
+from secstruct_svgs.loop import Loop
+from secstruct_svgs.canvas import Canvas
+from secstruct_svgs.util import get_stems, flatten, consecutive_segments, color, seq_for
 import numpy as np
 import math
 import copy
@@ -43,10 +43,17 @@ def get_loops( seq, stems ):
 			print "loop", loop , "has no adjacent stems!"
 			continue
 		if len(apical_stems) == 1:
+			print "apical loop", loop
+			print "conn to", apical_stems[0].numbers
 			real_loops.append( Loop( seq_for( loop, seq ), loop, apical_stems[0] ) )
 		elif len(adjacent_stems) == 1: # tail
+			print "tail loop", loop
+			print "conn to", adjacent_stems[0].numbers
 			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0], False, True ) )
-		else: # junction. Don't cover 'tails' yet.
+		else: 
+			print "junct loop", loop
+			print "conn to", adjacent_stems[0].numbers
+			print "conn to", adjacent_stems[1].numbers
 			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0], False, False, adjacent_stems[1] ) )
 	return real_loops
 
@@ -319,8 +326,16 @@ def mc( canvas ):
 
 if __name__=="__main__":
 	fn = 's_s_ss.svg'
-	seq = 'ccaaccgcaagguuggaucccauguuaaaaacgcaug'
-	ss  = '((((((....))))))....((((.........))))'
+	
+	# Exciting! This breaks loop assignment!
+	seq = 'ccccaaaccccaaaaggggaaaccccaaaaggggaaaccccaaaaggggaaaagggg'
+	ss  = '((((...((((....))))...((((....))))...((((....))))....))))'
+	
+	# Different loop lengths
+	#seq = 'ccaaccgcaagguuggaucccauguuaaaaacgcaug'
+	#ss  = '((((((....))))))....((((.........))))'
+	
+	# Different stem lengths
 	#seq = 'ccaaccgcaagguuggaucccauguucgcaug'
 	#ss  = '((((((....))))))....((((....))))'
 	#seq = 'ccccgcaaggggaucccauguucgcaug'
