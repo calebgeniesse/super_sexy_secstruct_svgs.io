@@ -5,4 +5,18 @@ class Nucleotide:
 		self.x = 0
 		self.y = 0
 		self.bp_partner = None
+		# Note: we're not doing 'internal coordinates' but
+		# truly just relative Cartesian coordinates.
+		# Still helps for propagation.
+		self.root_nt = None
+		self.dx = 0
+		self.dy = 0
+	
+	def update_absolute_coords( self ):
+		self.x = self.root_nt.x + self.dx
+		self.y = self.root_nt.y + self.dy
+
+	def update_relative_coords( self ):
+		self.dx = self.x - self.root_nt.x
+		self.dy = self.y - self.root_nt.y
 		
