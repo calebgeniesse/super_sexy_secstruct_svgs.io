@@ -344,6 +344,7 @@ def mc( canvas ):
 	return canvas
 
 if __name__=="__main__":
+	
 	fn = 's_s_ss.svg'
 	
 	# Exciting! This breaks loop assignment!

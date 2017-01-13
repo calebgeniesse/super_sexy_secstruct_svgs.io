@@ -1,5 +1,5 @@
 import svgwrite
-from util import color, loop_interpolate, interpolate
+from util import color, loop_interpolate, interpolate, flatten
 from coordinate_frame import CoordinateFrame
 
 class Canvas:
@@ -82,25 +82,38 @@ class Canvas:
 		self.stems.append( stem )
 		for seqpos in stem.nucleotides.keys(): self.nucleotides[ seqpos ] = stem.nucleotides[ seqpos ]
 		
-		# Set initial positions
+		# We need an unstructured stem.numbers for a second.
+		stem_numbers = flatten( stem.numbers )
 
+		# Set initial positions
 		x_offset = stem.coordinate_frame.position.x
 		y = stem.coordinate_frame.position.y
-		for bp_idx, bp in enumerate(stem.base_pairs): 
-			# need to compute some offet? ...
-			print "orientation is ", stem.coordinate_frame.orientation
-			y_offset = bp_idx * self.bp_offset_height * stem.coordinate_frame.orientation
-			bp.nt1.x = x_offset
-			bp.nt1.y = y + y_offset
-			bp.nt2.x = x_offset + self.bp_offset_width
-			bp.nt2.y = y + y_offset
+		stem.nucleotides[ min(stem_numbers) ].x = x_offset
+		stem.nucleotides[ min(stem_numbers) ].y = y
+		# If there is an i-1, this isn't root
+		if min(stem_numbers) - 1 in self.nucleotides.keys():
+			stem.nucleotides[ min(stem_numbers) ].ref_nt = self.nucleotides[ min(stem_numbers) - 1 ]
 
+		for bp_idx, bp in enumerate(stem.base_pairs): 
+			if bp.nt1.seqpos == min(stem_numbers) - 1:
+				bp.nt1.dy = bp.nt1.y - bp.nt1.ref_nt.y
+			else:	
+				bp.nt1.dy = self.bp_offset_height * stem.coordinate_frame.orientation
+			
+			if bp.nt2.seqpos == min(stem_numbers) - 1:
+				bp.nt2.dx = bp.nt2.x - bp.nt2.ref_nt.x
+			else:	
+				bp.nt2.dx = self.bp_offset_width
+			
+			bp.nt1.update_absolute_coords()
+			bp.nt2.update_absolute_coords()
 
 	def add_loop( self, loop ):
 		if loop.apical:
 			"""
 			y offsets don't make a ton of sense here. 
 			"""
+			
 			# Just trace path from coordinate frame start, plus y offset for
 			# height, to other side of stem.
 			loop.coordinate_frame.position.x  = loop.stem1.coordinate_frame.position.x
@@ -127,8 +140,16 @@ class Canvas:
 
 			x1, y1 = loop.coordinate_frame.position.x,  loop.coordinate_frame.position.y
 			x2, y2 = loop.coordinate_frame.position2.x, loop.coordinate_frame.position2.y
-			for loop_idx, loop_nt in enumerate(loop.nucleotides.keys()):
-				loop_idx = loop_nt - min(loop.nucleotides.keys())
+			
+			# We are GUARANTEED that min(numbers)-1 exists.
+			loop.nucleotides[ min(loop.numbers) ].ref_nt = self.nucleotides[ min(loop.numbers) - 1 ]
+			
+			for seqpos, nt in loop.nucleotides.iteritems():
+				if seqpos == min(loop.numbers): continue
+				nt.ref_nt = loop.nucleotides[ seqpos - 1 ]
+				
+			for seqpos, loop_nt in loop.nucleotides.iteritems():
+				loop_idx = seqpos - min(loop.nucleotides.keys())
 				fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( loop.numbers ))
 				# Note: loop_interpolate really ought to think about stem orientation
 				# Maybe add 180 for flipped (-1) stems
@@ -136,8 +157,12 @@ class Canvas:
 				add_angle = 180 if loop.stem1.coordinate_frame.orientation == -1 else 0
 
 				print "#### Fraction done with loop is: ", fraction_done_with_loop
-				loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y = loop_interpolate( x1,y1,x2,y2, total_loop_fraction, fraction_done_with_loop, add_angle=add_angle )
-				print "#### Placing loop nucleotide ", loop.nucleotides[loop_nt].name, loop_idx, " at ", loop.nucleotides[loop_nt].x, loop.nucleotides[loop_nt].y
+				loop_nt.x, loop_nt.y = loop_interpolate( x1,y1,x2,y2, total_loop_fraction, fraction_done_with_loop, add_angle=add_angle )
+				print "#### Placing loop nucleotide ", loop_nt.name, loop_idx, " at ", loop.loop_nt.x, loop_nt.y
+				
+				loop_nt.update_relative_coords()
+						
+						
 
 		elif loop.tail:
 			"""

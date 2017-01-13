@@ -1,4 +1,21 @@
 class Nucleotide:
+
+	def update_absolute_coords( self, unused=None ):
+		if self.ref_nt is None:
+			self.x = self.dx
+			self.y = self.dy
+		else:
+			self.x = self.ref_nt.x + self.dx
+			self.y = self.ref_nt.y + self.dy
+
+	def update_relative_coords( self, unused=None ):
+		if self.ref_nt is None:
+			self.x = self.dx
+			self.y = self.dy
+		else:
+			self.dx = self.x - self.ref_nt.x
+			self.dy = self.y - self.ref_nt.y
+
 	def __init__( self, one_letter_code, seqpos ):
 		self.name = one_letter_code
 		self.seqpos = seqpos
@@ -13,20 +30,3 @@ class Nucleotide:
 		self.ref_nt = None
 		self.dx = 0
 		self.dy = 0
-	
-	def update_absolute_coords( self ):
-		if self.ref_nt is None:
-			self.x = self.dx
-			self.y = self.dy
-		else:
-			self.x = self.ref_nt.x + self.dx
-			self.y = self.ref_nt.y + self.dy
-
-	def update_relative_coords( self ):
-		if self.ref_nt is None:
-			self.x = self.dx
-			self.y = self.dy
-		else:
-			self.dx = self.x - self.ref_nt.x
-			self.dy = self.y - self.ref_nt.y
-		

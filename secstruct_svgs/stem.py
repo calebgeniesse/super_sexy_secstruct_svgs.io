@@ -43,15 +43,15 @@ class Stem:
 		# but I like being explicit
 		numbers = sorted(flatten(stem_pattern) )
 		self.numbers = [ ( numbers[i], numbers[len(numbers)-i-1] )  
-		                    for i in xrange(len(numbers)/2 ) ]
-		
+							for i in xrange(len(numbers)/2 ) ]
+
 		# Trim common spacers from sequence
 		# Fold sequence into BPs
 		self.base_pairs = [ BasePair( 
 								Nucleotide(sequence[i], numbers[i]), 
 								Nucleotide(sequence[len(sequence)-i-1], numbers[len(sequence)-i-1]) )  
-		                    for i in xrange(len(sequence)/2 ) ]
-							
+							for i in xrange(len(sequence)/2 ) ]
+
 		# Build up nucleotides.
 		self.nucleotides = {}
 		for bp in self.base_pairs:
@@ -64,7 +64,8 @@ class Stem:
 		for seqpos, nt in self.nucleotides.iteritems():
 			if seqpos == min( numbers ): continue # min(numbers) stays None, 0, 0
 			
-			if self.numbers.index(seqpos) < len(self.numbers)/2:
+			if seqpos in [ bpnum[0] for bpnum in self.numbers ]:
+				#self.numbers.index(seqpos) < len(self.numbers)/2:
 				nt.ref_nt = self.nucleotides[ seqpos-1 ]
 			else: #if self.numbers.index(seqpos) >= len(self.numbers)/2
 				nt.ref_nt = nt.bp_partner
