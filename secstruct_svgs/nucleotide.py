@@ -8,15 +8,17 @@ class Nucleotide:
 		# Note: we're not doing 'internal coordinates' but
 		# truly just relative Cartesian coordinates.
 		# Still helps for propagation.
-		self.root_nt = None
+		# Root is always first nt; no rerooting (yet?)
+		# ref nt generally i-1, but can be just some BPed nt
+		self.ref_nt = None
 		self.dx = 0
 		self.dy = 0
 	
 	def update_absolute_coords( self ):
-		self.x = self.root_nt.x + self.dx
-		self.y = self.root_nt.y + self.dy
+		self.x = self.ref_nt.x + self.dx
+		self.y = self.ref_nt.y + self.dy
 
 	def update_relative_coords( self ):
-		self.dx = self.x - self.root_nt.x
-		self.dy = self.y - self.root_nt.y
+		self.dx = self.x - self.ref_nt.x
+		self.dy = self.y - self.ref_nt.y
 		
