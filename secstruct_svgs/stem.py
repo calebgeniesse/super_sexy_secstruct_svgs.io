@@ -51,13 +51,26 @@ class Stem:
 								Nucleotide(sequence[i], numbers[i]), 
 								Nucleotide(sequence[len(sequence)-i-1], numbers[len(sequence)-i-1]) )  
 		                    for i in xrange(len(sequence)/2 ) ]
-
+							
 		# Build up nucleotides.
 		self.nucleotides = {}
 		for bp in self.base_pairs:
 			self.nucleotides[ bp.nt1.seqpos ] = bp.nt1
 			self.nucleotides[ bp.nt2.seqpos ] = bp.nt2
 
+		# Right now, set internal coordinates. First nt of every stem will seem 
+		# like a ref right now, but the canvas can connect things up as needed.
+		# second half of seq ref is first half.
+		for seqpos, nt in self.nucleotides.iteritems():
+			if seqpos == min( numbers ): continue # min(numbers) stays None, 0, 0
+			
+			if self.numbers.index(seqpos) < len(self.numbers)/2:
+				nt.ref_nt = self.nucleotides[ seqpos-1 ]
+			else: #if self.numbers.index(seqpos) >= len(self.numbers)/2
+				nt.ref_nt = nt.bp_partner
+			nt.dx = nt.x - nt.ref_nt.x
+			nt.dy = nt.y - nt.ref_nt.y
+							
 		# All watson-crick for now.
 		self.base_pair_types = [ WATSON_CRICK for x in self.base_pairs ]
 

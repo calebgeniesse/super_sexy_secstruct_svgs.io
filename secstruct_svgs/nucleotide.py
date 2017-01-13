@@ -15,10 +15,18 @@ class Nucleotide:
 		self.dy = 0
 	
 	def update_absolute_coords( self ):
-		self.x = self.ref_nt.x + self.dx
-		self.y = self.ref_nt.y + self.dy
+		if self.ref_nt is None:
+			self.x = self.dx
+			self.y = self.dy
+		else:
+			self.x = self.ref_nt.x + self.dx
+			self.y = self.ref_nt.y + self.dy
 
 	def update_relative_coords( self ):
-		self.dx = self.x - self.ref_nt.x
-		self.dy = self.y - self.ref_nt.y
+		if self.ref_nt is None:
+			self.x = self.dx
+			self.y = self.dy
+		else:
+			self.dx = self.x - self.ref_nt.x
+			self.dy = self.y - self.ref_nt.y
 		

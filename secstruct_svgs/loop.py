@@ -28,4 +28,13 @@ class Loop:
 		# coordinate frames later.
 		# Note: orientation ignored.
 		self.coordinate_frame = CoordinateFrame( [0,0], 1, [0,0] )
-	
+		
+		# Right now, set internal coordinates. First nt of every loop will seem 
+		# like a ref right now, but the canvas can connect things up as needed.
+		for seqpos, nt in self.nucleotides.iteritems():
+			if seqpos == min( numbers ): continue # min(numbers) stays None, 0, 0
+			
+			nt.ref_nt = self.nucleotides[ seqpos-1 ]
+			nt.dx = nt.x - nt.ref_nt.x
+			nt.dy = nt.y - nt.ref_nt.y
+
