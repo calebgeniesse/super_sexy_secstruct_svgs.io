@@ -219,14 +219,19 @@ def score( canvas ):
 
 def perturb_loops( canvas ):
 	"""
-	Random perturbation to each NT. Gaussian?
-	Should ultimately have realistic kinematics... stems should move together, or at least BPs should.
+	Random perturbation to each loop nt, propagating 
+	to adjacent nts
 	"""
 
+	# Thought: ignore non-junction, as apicals are
+	# local and likely nearly ideal to start with.
+	
 	new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
 	
 	for loop in new_canvas.loops:
 
+		if loop.apical: continue
+	
 		# Achieve OK stem kinematics by perturbing one nt in a stem and marking the whole thing as moved.
 		moved_this_turn = { seqpos: False for seqpos in loop.nucleotides.keys() }
 
@@ -270,19 +275,33 @@ def perturb( canvas ):
 		dx = np.random.normal(0,3)
 		dy = np.random.normal(0,3)
 		
+		for loop in new_canvas.loops:
+			if seqpos not in loop.nucleotides.keys(): continue
+			# This was a perturbation to a loop. Partial-propagate.
+			# still skip apicals
+			if loop.apical: continue
+			nt.x += dx
+			nt.y += dy
+			for seqpos2, nt2 in loop.nucleotides.iteritems():
+				if seqpos2 == seqpos: continue
+				moved_this_turn[ pos ] = True
+				prefactor =  0.8 / abs( seqpos - seqpos2 ) 
+				nt2.x += prefactor * dx
+				nt2.y += prefactor * dy
+		
 		#print "Moving nt %d from ( %f, %f )... " % ( seqpos, new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y ),
-		nt.x += dx
-		nt.y += dy
 		#print "... to ( %f, %f )!" % ( new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y )
 
 		# Find any stems this seqpos might be part of...
 		for stem in new_canvas.stems:
-			if seqpos in stem.nucleotides.keys():
-				for pos, other_nt in stem.nucleotides.iteritems(): 
-					if pos == seqpos: continue
-					moved_this_turn[ pos ] = True
-					other_nt.x += dx
-					other_nt.y += dy
+			if seqpos not in stem.nucleotides.keys(): continue
+			nt.x += dx
+			nt.y += dy
+			for pos, other_nt in stem.nucleotides.iteritems(): 
+				if pos == seqpos: continue
+				moved_this_turn[ pos ] = True
+				other_nt.x += dx
+				other_nt.y += dy
 
 	return new_canvas
 
@@ -363,7 +382,7 @@ if __name__=="__main__":
 	# Also, how is the API user really going to know?
 	# You'd imagine they'd actually want to set it based on
 	# labels containing residues or something...
-	canvas.set_stems_coaxial( 0, 1 )
+	#canvas.set_stems_coaxial( 0, 1 )
 
 
 
