@@ -1,6 +1,12 @@
 import svgwrite
 
-import secstruct_svgs.stem
+import sys
+import os.path
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+
+import secstruct_svgs #.stem
 from secstruct_svgs.stem import Stem
 from secstruct_svgs.loop import Loop
 from secstruct_svgs.canvas import Canvas
