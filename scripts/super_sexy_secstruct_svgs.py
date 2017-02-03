@@ -289,8 +289,7 @@ def mc( canvas ):
             print("All-phase cycle %d: Rejected perturbation from %f to %f." % (x, old_score, new_score))
     return canvas
 
-if __name__=="__main__":
-
+def main():
     fn = 's_s_ss.svg'
 
     seq = 'ccccuuucccccaaaaggggguuuccccccaaaagggggguuucccccccaaaaggggggguuuugggg'
@@ -345,3 +344,7 @@ if __name__=="__main__":
     #canvas = mc(canvas)
     
     canvas.render()
+
+if __name__=="__main__":
+    main()
+    
