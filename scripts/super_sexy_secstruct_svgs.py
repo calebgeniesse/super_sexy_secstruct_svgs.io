@@ -1,19 +1,24 @@
-import svgwrite
+"""
+I don't believe this file ought to require a docstring. TODO.
+"""
+
+from __future__ import print_function
 
 import sys
 import os.path
+import math
+import copy
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-
-import secstruct_svgs #.stem
+#import secstruct_svgs
 from secstruct_svgs.stem import Stem
 from secstruct_svgs.loop import Loop
 from secstruct_svgs.canvas import Canvas
-from secstruct_svgs.util import get_stems, flatten, consecutive_segments, color, seq_for
+from secstruct_svgs.util import get_stems, flatten, consecutive_segments, seq_for, score #, distance, distance_squared, angle, closer_than, flat_harmonic_penalty, harmonic_penalty
 import numpy as np
-import math
-import copy
+
+import svgwrite
 
 # test
 #from util import loop_interpolate
@@ -36,352 +41,307 @@ import copy
 # stem 0; at the moment, the position and orientation *cannot* vary). So we can compute
 # 'stem internal coordinates' -- trivial -- then transform them.
 
-def get_loops( seq, stems ):
-	loop_nt = [ i+1 for i in xrange(len(seq)) if i+1 not in flatten([stem.numbers for stem in stems ])]
-	#print "loop_nt", loop_nt
-	loops = consecutive_segments( loop_nt )
-	print loops
-	real_loops = []
-	for loop in loops:
-		adjacent_stems = [ stem for stem in stems if min(loop)-1 in flatten(stem.numbers) or max(loop)+1 in flatten(stem.numbers) ]
-		apical_stems = [ stem for stem in stems if min(loop)-1 in flatten(stem.numbers) and max(loop)+1 in flatten(stem.numbers) ]
-		if len(adjacent_stems) == 0:
-			print "loop", loop , "has no adjacent stems!"
-			continue
-		if len(apical_stems) == 1:
-			print "apical loop", loop
-			print "conn to", apical_stems[0].numbers
-			real_loops.append( Loop( seq_for( loop, seq ), loop, apical_stems[0] ) )
-		elif len(adjacent_stems) == 1: # tail
-			print "tail loop", loop
-			print "conn to", adjacent_stems[0].numbers
-			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0], False, True ) )
-		else: 
-			print "junct loop", loop
-			print "conn to", adjacent_stems[0].numbers
-			print "conn to", adjacent_stems[1].numbers
-			real_loops.append( Loop( seq_for( loop, seq ), loop, adjacent_stems[0], False, False, adjacent_stems[1] ) )
-	return real_loops
+def get_loops(sequence, true_stems):
+    """
+    Given a sequence and the numbers that have been committed to stems,
+    this function extracts a set of loops -- first in terms of numbers
+    ('consecutive segments'), then in terms of Loop objects with Stem
+    attachments.
+    TODO: move to 'sequence utils' file.
+    """
+    loop_nt = [i + 1 for i in xrange(len(sequence)) if i+1 not in flatten([stem.numbers for stem in true_stems])]
+    #print "loop_nt", loop_nt
+    loops = consecutive_segments( loop_nt )
+    print(loops)
+    real_loops = []
+    for loop in loops:
+        adjacent_stems = [ stem for stem in true_stems if min(loop)-1 in flatten(stem.numbers) or max(loop)+1 in flatten(stem.numbers) ]
+        apical_stems = [ stem for stem in true_stems if min(loop)-1 in flatten(stem.numbers) and max(loop)+1 in flatten(stem.numbers) ]
+        if len(adjacent_stems) == 0:
+            print("loop", loop, "has no adjacent stems!")
+            continue
+        if len(apical_stems) == 1:
+            print("apical loop", loop)
+            print("conn to", apical_stems[0].numbers)
+            real_loops.append( Loop( seq_for( loop, sequence ), loop, apical_stems[0] ) )
+        elif len(adjacent_stems) == 1: # tail
+            print("tail loop", loop)
+            print("conn to", adjacent_stems[0].numbers)
+            real_loops.append( Loop( seq_for( loop, sequence ), loop, adjacent_stems[0], False, True ) )
+        else:
+            print("junct loop", loop)
+            print("conn to", adjacent_stems[0].numbers)
+            print("conn to", adjacent_stems[1].numbers)
+            real_loops.append( Loop( seq_for( loop, sequence ), loop, adjacent_stems[0], False, False, adjacent_stems[1] ) )
+    return real_loops
 
 
 def apicals( stems, loops ):
-	"""
-	Finds all the apical loops in the given set of loops. All apical loops stretch
-	from i+1 to j-1 for some base pair in a stem.
-	"""
-	
-	# AMW: for draw_apical_loop_reasonably_with_respect_to_stem, we actually
-	# want + need the stem_idx for now.
-	apicals = []
-	for loop in loops:
-		print "Apical?", loop
-		for stem_idx, stem in enumerate(stems):
-			print "\t",stem.numbers
-			if (min(loop)-1,max(loop)+1) in stem.numbers:
-				apicals.append([(stem_idx, stem), loop])
-				break
+    """
+    Finds all the apical loops in the given set of loops. All apical loops stretch
+    from i+1 to j-1 for some base pair in a stem.
+    """
 
-	return apicals
+    # AMW: for draw_apical_loop_reasonably_with_respect_to_stem, we actually
+    # want + need the stem_idx for now.
+    apicals = []
+    for loop in loops:
+        print("Apical?", loop)
+        for stem_idx, stem in enumerate(stems):
+            print("\t", stem.numbers)
+            if (min(loop)-1, max(loop)+1) in stem.numbers:
+                apicals.append([(stem_idx, stem), loop])
+                break
+
+    return apicals
 
 def junctions( stems, loops ):
-	"""
-	Junctions aren't just 'non-apical'; they're also 'non-tail'
-	So instead of just taking the non apical loops, we instead have to ensure that our 
-	candidate goes from max(stem1)+1 to min(stem2)-1
-	"""
-	junctions = []
-	for loop in loops:
-		for stem1_idx, stem1 in enumerate(stems):
-			for stem2_idx, stem2 in enumerate(stems):
-				if stem1_idx == stem2_idx: continue
-				if stem2_idx != stem1_idx + 1: continue
-				if max(flatten(stem1.numbers))+1 == min(loop) and min(flatten(stem2.numbers))-1 == max(loop):
-					junctions.append([(stem1_idx, stem1), (stem2_idx, stem2), loop])
+    """
+    Junctions aren't just 'non-apical'; they're also 'non-tail'
+    So instead of just taking the non apical loops, we instead have to ensure that our
+    candidate goes from max(stem1)+1 to min(stem2)-1
+    """
+    junctions = []
+    for loop in loops:
+        for stem1_idx, stem1 in enumerate(stems):
+            for stem2_idx, stem2 in enumerate(stems):
+                if stem1_idx == stem2_idx: continue
+                if stem2_idx != stem1_idx + 1: continue
+                if max(flatten(stem1.numbers))+1 == min(loop) and min(flatten(stem2.numbers))-1 == max(loop):
+                    junctions.append([(stem1_idx, stem1), (stem2_idx, stem2), loop])
 
-	print junctions
-	return junctions
-
-
-# constants used below. May end up functions of font.
-NT_DISTANCE = 20
-NT_MIN_DISTANCE = 10
-NT_MAX_DISTANCE = 25
-NT_MIN_ANGLE    = 90
-NT_MAX_ANGLE    = 180 # maybe should be 300... hm.
-# Imagine having different spring constants for stem vs loop vs PK
-#spring_constant = .1 suitable for harmonic, but not ideal
-spring_constant = 1
-angular_spring_constant = 1.0/15.0
-
-def score( canvas ):
-	"""
-	Assign a score to a configuration of nucleotides.
-	"""
-
-	def mod( vec ): return math.sqrt( vec[0] ** 2 + vec[1] ** 2 )
-
-	def dot( v1, v2 ): return v1[0]*v2[0] + v1[1]*v2[1]
-
-	def vector( nt1, nt2 ): return [ nt2.x - nt1.x, nt2.y - nt1.y ]
-
-	def distance( nt1, nt2 ): return mod( vector( nt1, nt2 ) )
-	
-	def angle( nt1, nt2, nt3 ):
-		""" Math looks right on this one but I am getting the supplement. So, fixing..."""
-		if vector( nt1, nt2 ) == [0,0]:
-			print "nt1", nt1.seqpos, " at ", nt1.x, nt1.y, " is at the same position as nt2", nt2.seqpos
-		if vector( nt2, nt3 ) == [0,0]:
-			print "nt2", nt2.seqpos, " at ", nt2.x, nt2.y, " is at the same position as nt3", nt3.seqpos
-		return 180.0 - math.degrees( math.acos( dot( vector( nt1, nt2 ), vector( nt2, nt3 ) ) / ( mod( vector( nt1, nt2 ) ) * mod( vector( nt2, nt3 ) ) ) ) )
-
-	def harmonic_penalty( dist, ideal, spring_constant ):
-		return spring_constant * ( dist - ideal ) ** 2
-
-	def flat_harmonic_penalty( dist, min, max, spring_constant ):
-		if dist < min:
-			return spring_constant * ( dist - min ) ** 2
-		elif dist > max:
-			return spring_constant * ( dist - max ) ** 2
-		else:
-			return 0
-
-	score = 0
-
-	# 1. Nucleotides should be a particular distance from what's adjacent to them in sequence.
-	# Form shouldn't be harmonic. Many distances are 'fine' -- say, 10-20 -- so we need a 'flat harmonic'
-	for seqpos in canvas.nucleotides.keys():
-		if seqpos + 1 in canvas.nucleotides.keys():
-			d = distance( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1] )
-			#print "Distance between %d and %d is %f" % (seqpos, seqpos+1, d)
-			#score += harmonic_penalty( d, NT_DISTANCE, spring_constant )
-			score += flat_harmonic_penalty( d, NT_MIN_DISTANCE, NT_MAX_DISTANCE, spring_constant )
-
-	# 1b. Angles
-	for seqpos in canvas.nucleotides.keys():
-		if seqpos + 1 in canvas.nucleotides.keys():
-			if seqpos + 2 in canvas.nucleotides.keys():
-				a = angle( canvas.nucleotides[seqpos], canvas.nucleotides[seqpos+1], canvas.nucleotides[seqpos+2] )
-				#print "Angle between %d and %d and %d is %f" % (seqpos, seqpos+1, seqpos+2, a)
-				# Don't worry about angular harmonic func at the moment.
-				score += flat_harmonic_penalty( a, NT_MIN_ANGLE, NT_MAX_ANGLE, angular_spring_constant )
-
-	# 2. Nucleotides should be at least 15 from ALL other nts. Don't double-count.
-	for seqpos1 in canvas.nucleotides.keys():
-		for seqpos2 in canvas.nucleotides.keys():
-			if seqpos1 >= seqpos2: continue
-			if distance( canvas.nucleotides[seqpos1], canvas.nucleotides[seqpos2] ) < 15: score += 100
-	
-	def closer_than( val1, val2, diff ): return  val2 - val1 < diff or val1 - val2 < diff
-
-	# 2b. Depending on base pair width, it's possible that the 'best' orientation for two stacks is
-	# for them to be overlapping...
-	#  nt --- nt
-	#  |   nt |-- nt
-	#  nt -|- nt  |
-	#  |   nt |-- nt
-	# so, penalize this ( 'between two bp'ed nts' penalized like hitting a nt )
-	for seqpos in canvas.nucleotides.keys():
-		for stem in canvas.stems:
-			for bp in stem.base_pairs:
-				if canvas.nucleotides[seqpos] == bp.nt1 or canvas.nucleotides[seqpos] == bp.nt2:
-					continue
-				# if nt in question is 'in between' nt1 and nt2. how to judge?
-				if canvas.nucleotides[seqpos].x > bp.nt1.x and canvas.nucleotides[seqpos].x < bp.nt2.x \
-					and closer_than( canvas.nucleotides[seqpos].y, bp.nt1.y, canvas.bp_offset_height*0.8 ):
-					score += 100
-			
-			# Look at pairs of adjacent nts in stem
-			for seqpos1 in stem.nucleotides.keys():
-				if seqpos1 + 1 in stem.nucleotides.keys():
-					nt1 = stem.nucleotides[ seqpos1 ]
-					nt2 = stem.nucleotides[ seqpos1 + 1 ]
-					if canvas.nucleotides[seqpos].y > nt1.y and canvas.nucleotides[seqpos].y < nt2.y \
-						and closer_than( canvas.nucleotides[seqpos].x, nt1.x, canvas.bp_offset_width*0.8 ):
-						score += 100
-
-	# 3. Stems should be straight and vertical.
-	### Resolved via kinematics?
-
-	# 4. Coaxial stacks, where known, should be colinear.
-	for idx1, idx2 in canvas.list_of_coaxialities:
-		# idx1 and idx2 are coaxial stems.
-		# Any two BPs from these stems should do, but -- because I have no idea
-		# how we intend to handle 'alternate-order' stacks (where the first nt in a bp
-		# is stacked on the second nt in another), compare either direction.
-		bp1 = canvas.stems[idx1].base_pairs[0]
-		bp2 = canvas.stems[idx2].base_pairs[0]
-		penalty1 = harmonic_penalty( bp1.nt1.x - bp2.nt1.x, 0, 1 ) + harmonic_penalty( bp1.nt2.x - bp2.nt2.x, 0, 1 )
-		penalty2 = harmonic_penalty( bp1.nt1.x - bp2.nt2.x, 0, 1 ) + harmonic_penalty( bp1.nt2.x - bp2.nt1.x, 0, 1 )
-		score += min( penalty1, penalty2 )
-
-
-	# 5. Apical loops should be symmetrical and near a circular path.
-	for loop in canvas.loops:
-		for seqpos in loop.nucleotides.keys():
-			pass
-
-	return score
+    print(junctions)
+    return junctions
 
 
 def perturb_loops( canvas ):
-	"""
-	Random perturbation to each NT. Gaussian?
-	Should ultimately have realistic kinematics... stems should move together, or at least BPs should.
-	"""
+    """
+    Random perturbation to each loop nt, propagating
+    to adjacent nts
+    """
 
-	new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
-	
-	for loop in new_canvas.loops:
+    # Thought: ignore non-junction, as apicals are
+    # local and likely nearly ideal to start with.
 
-		# Achieve OK stem kinematics by perturbing one nt in a stem and marking the whole thing as moved.
-		moved_this_turn = { seqpos: False for seqpos in loop.nucleotides.keys() }
+    new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
 
-		for seqpos, nt in loop.nucleotides.iteritems():
-			if moved_this_turn[ seqpos ]: continue
+    for loop in new_canvas.loops:
 
-			moved_this_turn[ seqpos ] = True
-			dx = np.random.normal(0,3)
-			dy = np.random.normal(0,3)
-		
-			#print "Moving nt %d from ( %f, %f )... " % ( seqpos, new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y ),
-			nt.x += dx
-			nt.y += dy
-			#print "... to ( %f, %f )!" % ( new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y )
+        if loop.apical: continue
 
-			# Each of the other nts in the loop do a proportion of the same motion
-			# depending on how far away
-			for seqpos2, nt2 in loop.nucleotides.iteritems():
-				if seqpos2 == seqpos: continue
-				prefactor =  0.8 / abs( seqpos - seqpos2 ) 
-				nt2.x += prefactor * dx
-				nt2.y += prefactor * dy
-			
-	return new_canvas
+        # Achieve OK stem kinematics by perturbing one nt in a stem and marking the whole thing as moved.
+        moved_this_turn = { seqpos: False for seqpos in loop.nucleotides.keys() }
+
+        for seqpos, nt in loop.nucleotides.iteritems():
+            if moved_this_turn[ seqpos ]: continue
+
+            moved_this_turn[ seqpos ] = True
+            dx = np.random.normal(0,3)
+            dy = np.random.normal(0,3)
+
+            #print "Moving nt %d from ( %f, %f )... " % ( seqpos, new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y ),
+            nt.x += dx
+            nt.y += dy
+            nt.relative_coordinates_need_updating = True
+            nt.update_relative_coords()
+            #print "... to ( %f, %f )!" % ( new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y )
+
+            # Each of the other nts in the loop do a proportion of the same motion
+            # depending on how far away
+            for seqpos2, nt2 in loop.nucleotides.iteritems():
+                if seqpos2 == seqpos: continue
+                prefactor =  0.8 / abs( seqpos - seqpos2 )
+                nt2.x += prefactor * dx
+                nt2.y += prefactor * dy
+                nt2.relative_coordinates_need_updating = True
+                nt2.update_relative_coords()
+            
+
+    return new_canvas
 
 
 def perturb( canvas ):
-	"""
-	Random perturbation to each NT. Gaussian?
-	Should ultimately have realistic kinematics... stems should move together, or at least BPs should.
-	"""
+    """
+    Random perturbation to each NT. Gaussian?
+    Should ultimately have realistic kinematics... stems should move together, or at least BPs should.
+    AMW: Right now we have partial kinematics, but really we should just update coords to propagate changes!
+    """
 
-	# Achieve OK stem kinematics by perturbing one nt in a stem and marking the whole thing as moved.
-	moved_this_turn = { seqpos: False for seqpos in canvas.nucleotides.keys() }
 
-	new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
-	for seqpos, nt in new_canvas.nucleotides.iteritems():
-		if moved_this_turn[ seqpos ]: continue
+    # Achieve OK stem kinematics by perturbing one nt in a stem and marking the whole thing as moved.
+    moved_this_turn = { seqpos: False for seqpos in canvas.nucleotides.keys() }
 
-		moved_this_turn[ seqpos ] = True
-		dx = np.random.normal(0,3)
-		dy = np.random.normal(0,3)
-		
-		#print "Moving nt %d from ( %f, %f )... " % ( seqpos, new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y ),
-		nt.x += dx
-		nt.y += dy
-		#print "... to ( %f, %f )!" % ( new_canvas.nucleotides[seqpos].x, new_canvas.nucleotides[seqpos].y )
+    new_canvas = copy.deepcopy(canvas)#Canvas(canvas)
+    
+    # Perturb stems directly
+    for idx, stem in enumerate(new_canvas.stems):
 
-		# Find any stems this seqpos might be part of...
-		for stem in new_canvas.stems:
-			if seqpos in stem.nucleotides.keys():
-				for pos, other_nt in stem.nucleotides.iteritems(): 
-					if pos == seqpos: continue
-					moved_this_turn[ pos ] = True
-					other_nt.x += dx
-					other_nt.y += dy
+        if np.random.uniform() < 0.1:
+            # Try a rotation
+            for bp_idx, bp in enumerate(stem.base_pairs):
+                complement_idx = len(stem.base_pairs) - bp_idx - 1
+                comp_bp = stem.base_pairs[complement_idx]
+                bp.nt1.x = comp_bp.nt2.x
+                bp.nt1.y = comp_bp.nt2.y
+                bp.nt2.x = comp_bp.nt1.x
+                bp.nt2.y = comp_bp.nt1.y
+                for nt in (bp.nt1, bp.nt2, comp_bp.nt1, comp_bp.nt2):
+                    nt.relative_coordinates_need_updating = True
+                    nt.update_relative_coords()
 
-	return new_canvas
+            continue
+
+        # Move 'root'
+        del_x = np.random.normal(0,3)
+        del_y = np.random.normal(0,3)
+        nt = stem.nucleotides[min(flatten(stem.numbers))]
+        nt.x += del_x
+        nt.y += del_y
+        for seqpos, nt in stem.nucleotides.iteritems():
+            moved_this_turn[ seqpos ] = True
+            if seqpos != min(flatten(stem.numbers)):
+                # this one was just updated
+                nt.absolute_coordinates_need_updating = True
+                nt.update_absolute_coords()
+
+        # update dependent loops
+        for loop in new_canvas.loops:
+            if loop.stem1 is stem:
+                # we fold from stem
+                for seqpos, nt in loop.nucleotides.iteritems():
+                    nt.absolute_coordinates_need_updating = True
+                    nt.update_absolute_coords()
+      
+    for loop in new_canvas.loops:
+        if loop.apical: continue
+        for seqpos, nt in loop.nucleotides.iteritems():
+            if moved_this_turn[ seqpos ]: continue
+
+            moved_this_turn[ seqpos ] = True
+            dx = np.random.normal(0,3)
+            dy = np.random.normal(0,3)
+
+            # This was a perturbation to a loop. Partial-propagate.
+            # still skip apicals
+            nt.x += dx
+            nt.y += dy
+            for seqpos2, nt2 in loop.nucleotides.iteritems():
+                if seqpos2 == seqpos: continue
+                moved_this_turn[ seqpos2 ] = True
+                prefactor =  0.8 / abs( seqpos - seqpos2 )
+                nt2.x += prefactor * dx
+                nt2.y += prefactor * dy
+        
+    return new_canvas
 
 def metropolis( new, old, temp ): 
-	return np.random.uniform() < math.exp( ( old - new ) / temp )
+    return np.random.uniform() < math.exp( ( old - new ) / temp )
+
+def prepack(canvas):
+    """
+    Utterly broken, but this gives you the idea.
+    """
+    for coaxiality in canvas.list_of_coaxialities:
+        old_score = score(canvas)
+        reversed_canvas = copy.deepcopy(canvas)
+        # there is a better way to do this
+        reversed_canvas.list_of_coaxialities[reversed_canvas.list_of_coaxialities.index(coaxiality)] = [coaxiality[1], coaxiality[0]]
+        reversed_canvas.initialize_stem_relative_positions()
+        for stem in reversed_canvas.stems:
+            stem.update_absolute_coords()
+        new_score = score(reversed_canvas)
+        print("Attempting coaxiality reversal, old score", old_score, "new score", new_score)
+        if new_score < old_score:
+            canvas = reversed_canvas
+    return canvas
 
 def mc_loops( canvas ):
-	
-	cycles = 1#000
-	for x in xrange(cycles):
-		old_score = score(canvas)
-		new_canvas = perturb_loops(canvas)
-		new_score = score(new_canvas)
-		if new_score < old_score or metropolis( new_score, old_score, temp=1 ):
-			# accept
-			print "Loop phase: Accepted perturbation from %f to %f." % ( old_score, new_score )
-			canvas = new_canvas
+    cycles = 1000
+    for x in xrange(cycles):
+        old_score = score(canvas)
+        new_canvas = perturb_loops(canvas)
+        new_score = score(new_canvas)
+        if new_score < old_score or metropolis(new_score, old_score, temp=1):
+            # accept
+            print("Loop phase cycle %d: Accepted perturbation from %f to %f." % (x, old_score, new_score))
+            canvas = new_canvas
 
-		else:
-			print "Loop phase: Rejected perturbation from %f to %f." % ( old_score, new_score )
-	return canvas
+        else:
+            print("Loop phase cycle %d: Rejected perturbation from %f to %f." % (x, old_score, new_score))
+    return canvas
 
 def mc( canvas ):
-	"""
-	This is an in-progress framework for doing MCMC simulations on a canvas.
-	The idea is that you score NT configurations, update, etc.
-	"""
-	cycles = 1#000
-	for x in xrange(cycles):
-		old_score = score(canvas)
-		new_canvas = perturb(canvas)
-		new_score = score(new_canvas)
-		if new_score < old_score or metropolis( new_score, old_score, temp=1 ):
-			# accept
-			print "Accepted perturbation from %f to %f." % ( old_score, new_score )
-			canvas = new_canvas
+    """
+    This is an in-progress framework for doing MCMC simulations on a canvas.
+    The idea is that you score NT configurations, update, etc.
+    """
+    cycles = 1000
+    for x in xrange(cycles):
+        old_score = score(canvas)
+        new_canvas = perturb(canvas)
+        new_score = score(new_canvas)
+        if new_score < old_score or metropolis( new_score, old_score, temp=1 ):
+            # accept
+            print("All-phase cycle %d: Accepted perturbation from %f to %f." % (x, old_score, new_score))
+            canvas = new_canvas
 
-		else:
-			print "Rejected perturbation from %f to %f." % ( old_score, new_score )
-	return canvas
+        else:
+            print("All-phase cycle %d: Rejected perturbation from %f to %f." % (x, old_score, new_score))
+    return canvas
 
 if __name__=="__main__":
-	fn = 's_s_ss.svg'
-	
-	# Exciting! This breaks loop assignment!
-	seq = 'ccccaaaccccaaaaggggaaaccccaaaaggggaaaccccaaaaggggaaaagggg'
-	ss  = '((((...((((....))))...((((....))))...((((....))))....))))'
-	
-	# Different loop lengths
-	#seq = 'ccaaccgcaagguuggaucccauguuaaaaacgcaug'
-	#ss  = '((((((....))))))....((((.........))))'
-	
-	# Different stem lengths
-	#seq = 'ccaaccgcaagguuggaucccauguucgcaug'
-	#ss  = '((((((....))))))....((((....))))'
-	#seq = 'ccccgcaaggggaucccauguucgcaug'
-	#ss  = '((((....))))....((((....))))'
+
+    fn = 's_s_ss.svg'
+
+    seq = 'ccccuuucccccaaaaggggguuuccccccaaaagggggguuucccccccaaaaggggggguuuugggg'
+    ss  = '((((...(((((....)))))...((((((....))))))...(((((((....)))))))....))))'
+
+    # Different loop lengths
+    #seq = 'ccaaccgcaagguuggaucccauguuaaaaacgcaug'
+    #ss  = '((((((....))))))....((((.........))))'
+
+    # Different stem lengths
+    #seq = 'ccaaccgcaagguuggaucccauguucgcaug'
+    #ss  = '((((((....))))))....((((....))))'
+    #seq = 'ccccgcaaggggaucccauguucgcaug'
+    #ss  = '((((....))))....((((....))))'
     # Eventually: support chainbreaks
 
-	# This produces old-style numerical stems. I want to turn them into
+    # This produces old-style numerical stems. I want to turn them into
     # sequence stems. Use the sequence + numerical stem ctor.
-	stems = [ Stem( seq, stem ) for stem in get_stems( ss, seq ) ]
+    stems = [Stem(seq, stem) for stem in get_stems(ss, seq)]
+    # Find loops by process of elimination
+    loops = get_loops(seq, stems)
 
-	# Find loops by process of elimination
-	loops = get_loops( seq, stems )
+    dwg = svgwrite.Drawing(fn)
+    canvas = Canvas(dwg)
+    
+    for stem in stems: canvas.add_stem(stem)
+    
+    # Inform the canvas that stem 1 and stem 2 are coaxial.
+    # This doesn't make that great semantic sense, but the canvas
+    # is the only stem-collection type object so it is aware of this
+    # sort of thing.
 
-	dwg = svgwrite.Drawing( fn )
+    # Also, how is the API user really going to know?
+    # You'd imagine they'd actually want to set it based on
+    # labels containing residues or something...
+    canvas.set_stems_coaxial(0, 1)
 
-	canvas = Canvas( dwg )
-	for stem in stems: canvas.add_stem( stem )
-
-	
-	# Inform the canvas that stem 1 and stem 2 are coaxial.
-	# This doesn't make that great semantic sense, but the canvas
-	# is the only stem-collection type object so it is aware of this
-	# sort of thing.
-
-	# Also, how is the API user really going to know?
-	# You'd imagine they'd actually want to set it based on
-	# labels containing residues or something...
-	canvas.set_stems_coaxial( 0, 1 )
+    canvas.initialize_stem_relative_positions()
 
 
+    # We have to do this before adding any loops because (initial) positions
+    # are calculated after addition time.
+    for loop in loops: canvas.add_loop(loop)
 
-	# We have to do this before adding any loops because (initial) positions
-	# are calculated after addition time.
-	for loop in loops: canvas.add_loop( loop )
-	
-
-	# Maybe a relaxation phase where we only move loops -- and move
-	# them in some sort of sensible synchrony -- is in order.
-	canvas = mc_loops( canvas )
-
-	canvas = mc(canvas)
-	
-	canvas.render()
+    # Big moves that don't require subtlety. For example: what's the best-scoring stem coaxiality?
+    # (given a particular list of coaxialities)
+    canvas = prepack(canvas)
+    
+    # Maybe a relaxation phase where we only move loops -- and move
+    # them in some sort of sensible synchrony -- is in order.
+    #canvas = mc_loops(canvas)
+    #canvas = mc(canvas)
+    
+    canvas.render()
