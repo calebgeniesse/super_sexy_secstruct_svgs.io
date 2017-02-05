@@ -290,9 +290,7 @@ def mc( canvas ):
     return canvas
 
 def main():
-    
-    import tkinter
-    tkinter._test()
+
 
     fn = 's_s_ss.svg'
 
@@ -337,6 +335,13 @@ def main():
     # We have to do this before adding any loops because (initial) positions
     # are calculated after addition time.
     for loop in loops: canvas.add_loop(loop)
+
+    import tkinter
+    from tkinter import Button
+    window = tkinter.Tk()
+    window.mainloop()
+    do_prepack = Button(window)
+
 
     # Big moves that don't require subtlety. For example: what's the best-scoring stem coaxiality?
     # (given a particular list of coaxialities)
