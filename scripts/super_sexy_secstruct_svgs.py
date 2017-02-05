@@ -49,7 +49,7 @@ def get_loops(sequence, true_stems):
     attachments.
     TODO: move to 'sequence utils' file.
     """
-    loop_nt = [i + 1 for i in xrange(len(sequence)) if i+1 not in flatten([stem.numbers for stem in true_stems])]
+    loop_nt = [i + 1 for i in range(len(sequence)) if i+1 not in flatten([stem.numbers for stem in true_stems])]
     #print "loop_nt", loop_nt
     loops = consecutive_segments( loop_nt )
     print(loops)
@@ -132,7 +132,7 @@ def perturb_loops( canvas ):
         # Achieve OK stem kinematics by perturbing one nt in a stem and marking the whole thing as moved.
         moved_this_turn = { seqpos: False for seqpos in loop.nucleotides.keys() }
 
-        for seqpos, nt in loop.nucleotides.iteritems():
+        for seqpos, nt in loop.nucleotides.items():
             if moved_this_turn[ seqpos ]: continue
 
             moved_this_turn[ seqpos ] = True
@@ -148,7 +148,7 @@ def perturb_loops( canvas ):
 
             # Each of the other nts in the loop do a proportion of the same motion
             # depending on how far away
-            for seqpos2, nt2 in loop.nucleotides.iteritems():
+            for seqpos2, nt2 in loop.nucleotides.items():
                 if seqpos2 == seqpos: continue
                 prefactor =  0.8 / abs( seqpos - seqpos2 )
                 nt2.x += prefactor * dx
@@ -197,7 +197,7 @@ def perturb( canvas ):
         nt = stem.nucleotides[min(flatten(stem.numbers))]
         nt.x += del_x
         nt.y += del_y
-        for seqpos, nt in stem.nucleotides.iteritems():
+        for seqpos, nt in stem.nucleotides.items():
             moved_this_turn[ seqpos ] = True
             if seqpos != min(flatten(stem.numbers)):
                 # this one was just updated
@@ -208,13 +208,13 @@ def perturb( canvas ):
         for loop in new_canvas.loops:
             if loop.stem1 is stem:
                 # we fold from stem
-                for seqpos, nt in loop.nucleotides.iteritems():
+                for seqpos, nt in loop.nucleotides.items():
                     nt.absolute_coordinates_need_updating = True
                     nt.update_absolute_coords()
       
     for loop in new_canvas.loops:
         if loop.apical: continue
-        for seqpos, nt in loop.nucleotides.iteritems():
+        for seqpos, nt in loop.nucleotides.items():
             if moved_this_turn[ seqpos ]: continue
 
             moved_this_turn[ seqpos ] = True
@@ -225,7 +225,7 @@ def perturb( canvas ):
             # still skip apicals
             nt.x += dx
             nt.y += dy
-            for seqpos2, nt2 in loop.nucleotides.iteritems():
+            for seqpos2, nt2 in loop.nucleotides.items():
                 if seqpos2 == seqpos: continue
                 moved_this_turn[ seqpos2 ] = True
                 prefactor =  0.8 / abs( seqpos - seqpos2 )
@@ -257,7 +257,7 @@ def prepack(canvas):
 
 def mc_loops( canvas ):
     cycles = 1000
-    for x in xrange(cycles):
+    for x in range(cycles):
         old_score = score(canvas)
         new_canvas = perturb_loops(canvas)
         new_score = score(new_canvas)
@@ -276,7 +276,7 @@ def mc( canvas ):
     The idea is that you score NT configurations, update, etc.
     """
     cycles = 1000
-    for x in xrange(cycles):
+    for x in range(cycles):
         old_score = score(canvas)
         new_canvas = perturb(canvas)
         new_score = score(new_canvas)
@@ -290,6 +290,10 @@ def mc( canvas ):
     return canvas
 
 def main():
+    
+    import tkinter
+    tkinter._test()
+
     fn = 's_s_ss.svg'
 
     seq = 'ccccuuucccccaaaaggggguuuccccccaaaagggggguuucccccccaaaaggggggguuuugggg'
@@ -343,7 +347,7 @@ def main():
     #canvas = mc_loops(canvas)
     #canvas = mc(canvas)
     
-    canvas.render()
+    svg_render()
 
 if __name__=="__main__":
     main()

@@ -36,47 +36,7 @@ class Canvas(object):
     #    self.stems = [ Stem( orig.stem ) for 
     #    self.loops = []
     #    self.nucleotides = {}
-
-    
-    def draw_text( self, text, loc, color ):
-        self.dwg.add(self.dwg.text(text, insert=loc, fill=color ) )
-
-    def draw_line( self, loc1, loc2, stroke=svgwrite.rgb(10, 10, 16, '%') ):
-        self.dwg.add(self.dwg.line(loc1, loc2, stroke=stroke ) )
-
-    def draw_nt( self, nt ):
-        self.dwg.add(self.dwg.text(nt.name, insert=(nt.x, nt.y), fill=color(nt.name) ) )
-
-        # numbers if multiple of 5
-        # TODO: adjust size
-        if nt.seqpos % 5 == 0: self.draw_text( nt.seqpos, (nt.x-15, nt.y+5), color(nt.name) )
-
-    def draw_bp( self, bp1, bp2 ):
-        """
-        Needs some kind of line centering relative to the height of the characters.
-        """
-        self.draw_nt( bp1 )
-        self.draw_nt( bp2 )
-        # Assumed horizontal. Don't have a good idea of how to figure out this line otherwise.
-        # Probably draw about 80% of (x1,y1)-(x2,y2)
-
-        center1 = [bp1.x,bp1.y]
-        center2 = [bp2.x,bp2.y]
-
-        # Aim is 80%
-        frac = 0.8
-        f1 = ( 1.0 + frac ) / 2
-        f2 = ( 1.0 - frac ) / 2
-
-        #beg = [ f1 * center1[0] + f2 * center2[0], f1 * center1[1] + f2 * center2[1] ]
-        #end = [ f2 * center1[0] + f1 * center2[0], f2 * center1[1] + f1 * center2[1] ]
-        beg = [ center1[0] + f1*(center2[0]-center1[0]), center1[1] + f1*(center2[1]-center1[1]) ]
-        end = [ center1[0] + f2*(center2[0]-center1[0]), center1[1] + f2*(center2[1]-center1[1]) ]
-
-        #self.draw_line( (bp1.x + 10, bp1.y - self.font_height_offset), 
-        #                (bp1.x + 25, bp1.y - self.font_height_offset) )
-        self.draw_line( beg, end )
-
+        
     def add_stem( self, stem ):
         """
         We override the default coordinate frame with one that uses a little more information
@@ -170,11 +130,11 @@ class Canvas(object):
         # We are GUARANTEED that min(numbers)-1 exists.
         loop.nucleotides[ min(loop.numbers) ].ref_nt = self.nucleotides[ min(loop.numbers) - 1 ]
 
-        for seqpos, nt in loop.nucleotides.iteritems():
+        for seqpos, nt in loop.nucleotides.items():
             if seqpos == min(loop.numbers): continue
             nt.ref_nt = loop.nucleotides[ seqpos - 1 ]
 
-        for seqpos, loop_nt in loop.nucleotides.iteritems():
+        for seqpos, loop_nt in loop.nucleotides.items():
             loop_idx = seqpos - min(loop.nucleotides.keys())
             fraction_done_with_loop = (float(loop_idx)+0.5) / float(len( loop.numbers ))
             # Note: loop_interpolate really ought to think about stem orientation
@@ -251,7 +211,7 @@ class Canvas(object):
 
         # Junction loops for coaxial stacks may suck for now... but maybe we can fix with MC now that
         # kinematics are more reliable.
-        for loop_key, loop_nt in loop.nucleotides.iteritems():
+        for loop_key, loop_nt in loop.nucleotides.items():
             # 'prior' nt guaranteed to exist.
             loop_nt.ref_nt = self.nucleotides[loop_key - 1]
             loop_nt.dx, loop_nt.dy = frac_dx, frac_dy
@@ -284,7 +244,7 @@ class Canvas(object):
 
     def add_loop( self, loop ):
         self.loops.append(loop)
-        for seqpos, loop_nt in loop.nucleotides.iteritems(): self.nucleotides[ seqpos ] = loop_nt
+        for seqpos, loop_nt in loop.nucleotides.items(): self.nucleotides[ seqpos ] = loop_nt
         if loop.apical:
             self.add_apical_loop( loop )
         elif loop.tail:
@@ -387,32 +347,72 @@ class Canvas(object):
         for loop in self.loops:
             print("Updating loop containing", loop.nucleotides)
             # Just update them all
-            for _, nt in loop.nucleotides.iteritems():
+            for _, nt in loop.nucleotides.items():
                 nt.absolute_coordinates_need_updating = True
                 nt.update_absolute_coords()
 
-    def draw_stem( self, stem ):
+def svg_render(canvas):
+    def draw_text(canvas, text, loc, color):
+        canvas.dwg.add(canvas.dwg.text(text, insert=loc, fill=color ) )
+
+    def draw_line(canvas, loc1, loc2, stroke=svgwrite.rgb(10, 10, 16, '%')):
+        canvas.dwg.add(canvas.dwg.line(loc1, loc2, stroke=stroke))
+
+    def draw_nt(canvas, nt):
+        canvas.dwg.add(canvas.dwg.text(nt.name, insert=(nt.x, nt.y), fill=color(nt.name) ) )
+
+        # numbers if multiple of 5
+        # TODO: adjust size
+        if nt.seqpos % 5 == 0: self.draw_text( nt.seqpos, (nt.x-15, nt.y+5), color(nt.name) )
+
+    def draw_bp(canvas, bp1, bp2):
+        """
+        Needs some kind of line centering relative to the height of the characters.
+        """
+        draw_nt(canvas, bp1)
+        draw_nt(canvas, bp2)
+        # Assumed horizontal. Don't have a good idea of how to figure out this line otherwise.
+        # Probably draw about 80% of (x1,y1)-(x2,y2)
+
+        center1 = [bp1.x,bp1.y]
+        center2 = [bp2.x,bp2.y]
+
+        # Aim is 80%
+        frac = 0.8
+        f1 = ( 1.0 + frac ) / 2
+        f2 = ( 1.0 - frac ) / 2
+
+        #beg = [ f1 * center1[0] + f2 * center2[0], f1 * center1[1] + f2 * center2[1] ]
+        #end = [ f2 * center1[0] + f1 * center2[0], f2 * center1[1] + f1 * center2[1] ]
+        beg = [ center1[0] + f1*(center2[0]-center1[0]), center1[1] + f1*(center2[1]-center1[1]) ]
+        end = [ center1[0] + f2*(center2[0]-center1[0]), center1[1] + f2*(center2[1]-center1[1]) ]
+
+        #self.draw_line( (bp1.x + 10, bp1.y - self.font_height_offset), 
+        #                (bp1.x + 25, bp1.y - self.font_height_offset) )
+        self.draw_line( beg, end )
+
+    def draw_stem(canvas, stem):
         # draw basepairs
-        for bp in stem.base_pairs: 
-            self.draw_bp( bp.nt1, bp.nt2 )
+        for bp in canvas.base_pairs: 
+            draw_bp(bp.nt1, bp.nt2)
 
-    def draw_apical_loop( self, apical_loop ):
-        for loop_nt in apical_loop.nucleotides.itervalues():
-            self.draw_nt(loop_nt)
+    def draw_apical_loop(canvas, apical_loop):
+        for loop_nt in apical_loop.nucleotides.values():
+            draw_nt(canvas, loop_nt)
 
-    def draw_junction_loop( self, junction_loop ):
-        for loop_nt in junction_loop.nucleotides.itervalues():
-            self.draw_nt(loop_nt)
+    def draw_junction_loop(canvas, junction_loop):
+        for loop_nt in junction_loop.nucleotides.values():
+            draw_nt(canvas, loop_nt)
 
-    def draw_sequence_line( self, nt1, nt2 ):
+    def draw_sequence_line(canvas, nt1, nt2):
         """
         Draw a line between consecutive nucleotides. Thin and grey. 
         Figure out where the subjective centers of the nts are ( depends on font but likely about 
         5-6 px up and right of (x,y) ) and draw about 80% of that vector.
         """
 
-        center1 = [ nt1.x + self.font_height_offset, nt1.y - self.font_height_offset ]
-        center2 = [ nt2.x + self.font_height_offset, nt2.y - self.font_height_offset ]
+        center1 = [nt1.x + canvas.font_height_offset, nt1.y - canvas.font_height_offset]
+        center2 = [nt2.x + canvas.font_height_offset, nt2.y - canvas.font_height_offset]
 
         #beg = [ 0.9 * center1[0] + 0.1 * center2[0], 0.9 * center1[1] + 0.1 * center2[1] ]
         #end = [ 0.1 * center1[0] + 0.9 * center2[0], 0.1 * center1[1] + 0.9 * center2[1] ]
@@ -427,17 +427,16 @@ class Canvas(object):
         beg = [ center1[0] + f1*(center2[0]-center1[0]), center1[1] + f1*(center2[1]-center1[1]) ]
         end = [ center1[0] + f2*(center2[0]-center1[0]), center1[1] + f2*(center2[1]-center1[1]) ]
 
-        self.draw_line( beg, end, 'gray' )
+        draw_line(canvas, beg, end, 'gray')
 
-    def render( self ):
-        for stem in self.stems: self.draw_stem( stem )
-        for apical in [ loop for loop in self.loops if loop.apical ]:
-            self.draw_apical_loop( apical )
-        for junction in [ loop for loop in self.loops if not loop.apical ]:
-            self.draw_junction_loop( junction )
+    for stem in canvas.stems: canvas.draw_stem(stem)
+        for apical in [loop for loop in canvas.loops if loop.apical]:
+            draw_apical_loop(canvas, apical)
+        for junction in [loop for loop in canvas.loops if not loop.apical]:
+            draw_junction_loop(canvas, junction)
 
-        for seqpos in self.nucleotides.iterkeys():
-            if seqpos + 1 in self.nucleotides.iterkeys():
-                self.draw_sequence_line( self.nucleotides[seqpos], self.nucleotides[seqpos + 1] )
+        for seqpos in canvas.nucleotides.keys():
+            if seqpos + 1 in canvas.nucleotides.keys():
+                draw_sequence_line(canvas.nucleotides[seqpos], canvas.nucleotides[seqpos + 1])
 
-        self.dwg.save()
+        canvas.dwg.save()

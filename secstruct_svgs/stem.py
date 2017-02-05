@@ -35,15 +35,15 @@ class Stem(object):
         # AMW: Actually, this may end up redoing the same organization as input
         # but I like being explicit
         numbers = sorted(flatten(stem_pattern) )
-        self.numbers = [ ( numbers[i], numbers[len(numbers)-i-1] )  
-                         for i in xrange(len(numbers)/2 ) ]
+        self.numbers = [(numbers[i], numbers[len(numbers) - i - 1])  
+                         for i in range(len(numbers) // 2)]
 
         # Trim common spacers from sequence
         # Fold sequence into BPs
         self.base_pairs = [ BasePair( 
             Nucleotide(sequence[i], numbers[i]), 
-            Nucleotide(sequence[len(sequence)-i-1], numbers[len(sequence)-i-1]) )  
-                            for i in xrange(len(sequence)/2 ) ]
+            Nucleotide(sequence[len(sequence)-i-1], numbers[len(sequence) - i - 1]))
+                            for i in range(len(sequence) // 2)]
 
         # Build up nucleotides.
         self.nucleotides = {}
@@ -54,7 +54,7 @@ class Stem(object):
         # Right now, set internal coordinates. First nt of every stem will seem 
         # like a ref right now, but the canvas can connect things up as needed.
         # second half of seq ref is first half.
-        for seqpos, nt in self.nucleotides.iteritems():
+        for seqpos, nt in self.nucleotides.items():
             if seqpos == min( numbers ): continue # min(numbers) stays None, 0, 0
             
             if seqpos in [ bpnum[0] for bpnum in self.numbers ]:
@@ -71,10 +71,10 @@ class Stem(object):
 
         # First rotation notion. Pair with 1 (DOWN) or -1 (UP)
         self.coordinate_frame = CoordinateFrame( [ 0, 0 ], 1 )
-        print "in ctor, orientation ", self.coordinate_frame.orientation
+        print("in ctor, orientation ", self.coordinate_frame.orientation)
 
     def update_absolute_coords(self):
-        for nt in self.nucleotides.itervalues():
+        for nt in self.nucleotides.values():
             if nt.ref_nt is None:
                 continue
             print("Stem: updating abs coords for", nt.seqpos)
@@ -83,5 +83,5 @@ class Stem(object):
             print("NT coords post:", nt.x, nt.y, nt.ref_nt.seqpos)
 
     def update_relative_coords(self):
-        for nt in self.nucleotides.itervalues():
+        for nt in self.nucleotides.values():
             nt.update_relative_coords()

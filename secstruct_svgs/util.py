@@ -50,7 +50,7 @@ def color(nt):
     if nt == 'g': return 'red'
     if nt == 'u': return 'blue'
     
-    print "WARNING: unrecognized nucleotide."
+    print("WARNING: unrecognized nucleotide.")
 
 def interpolate( v1, v2, frac ): return v1 + float(v2-v1)*frac
 
@@ -121,7 +121,7 @@ def parse_ss( fasta_entities, line ):
         if c == left_bracket_char:  left_brackets.append( count )
         if c == right_bracket_char:
             if len( left_brackets ) == 0:
-                print "ValidationError: Number of right brackets does not match left brackets"
+                print("ValidationError: Number of right brackets does not match left brackets")
                 exit()
             res1 = left_brackets[-1]
             res2 = count
@@ -130,11 +130,11 @@ def parse_ss( fasta_entities, line ):
             pair_map[ res2 ] = res1
             #all_pairs.append( [res1,res2] )
             if fasta_entities[ res2-1 ] in complement.keys() and len( fasta_entities ) > 0 and not fasta_entities[res1-1] in complement[ fasta_entities[res2-1] ]:
-                print "ValidationError: Not complementary at positions %s%d and %s%d!"  % (fasta_entities[res1-1],res1,fasta_entities[res2-1],res2)
+                print("ValidationError: Not complementary at positions %s%d and %s%d!"  % (fasta_entities[res1-1],res1,fasta_entities[res2-1],res2))
                 exit()
 
     if len (left_brackets) > 0:
-        print "ValidationError: Number of right brackets does not match left brackets"
+        print("ValidationError: Number of right brackets does not match left brackets")
         exit()
     return pair_map#, all_pairs
 
@@ -157,11 +157,11 @@ def get_stems( line, sequence_for_fasta ):
     numres = len(line)
 
     # Parse out stems
-    already_in_stem = { i: 0 for i in xrange( numres ) }
+    already_in_stem = { i: 0 for i in range(numres) }
     
     stems = []
-    for i in xrange( 1, numres + 1 ):
-        if not pair_map.has_key( i ) or already_in_stem[ i ]: continue
+    for i in range(1, numres + 1):
+        if not i in pair_map or already_in_stem[ i ]: continue
 
         k = i 
         stem_res = []
@@ -170,7 +170,7 @@ def get_stems( line, sequence_for_fasta ):
         already_in_stem[ k ] = 1
         already_in_stem[ pair_map[k] ] = 1
 
-        while pair_map.has_key( k + 1 ) and pair_map[ k+1 ] == pair_map[ k ] - 1 and not already_in_stem[k+1] and not k in chainbreak_pos and not pair_map[k+1] in chainbreak_pos:
+        while k + 1 in pair_map and pair_map[ k+1 ] == pair_map[ k ] - 1 and not already_in_stem[k+1] and not k in chainbreak_pos and not pair_map[k+1] in chainbreak_pos:
             k += 1
             stem_res.append( [k, pair_map[k]] )
             already_in_stem[ k ] = 1
@@ -214,8 +214,8 @@ def loop_interpolate( x1,y1,x2,y2, fraction_of_circle, fraction_done_with_loop, 
     elif x1 == x2:
         unit = [1,0]
     else:
-        print y2-y1
-        print x2-x1
+        print(y2-y1)
+        print(x2-x1)
         unit = [1,float(-1)/float((y2-y1)/float(x2-x1))]
     xC,yC = [ (unit[0] * mMC) + (x1+x2)/2, (unit[1] * mMC) + (y1+y2)/2]
     #print xC, yC
@@ -248,7 +248,7 @@ def length_score( canvas ):
     form shouldn't be harmonic. Many distances are 'fine' -- say, 10-20 -- so we need a 'flat harmonic'
     """
     score = 0
-    for seqpos, nt in canvas.nucleotides.iteritems():
+    for seqpos, nt in canvas.nucleotides.items():
         if seqpos + 1 not in canvas.nucleotides.keys(): continue
 
         d = distance( nt, canvas.nucleotides[seqpos+1] )
@@ -265,7 +265,7 @@ def angle_score( canvas ):
     form shouldn't be harmonic. Many distances are 'fine' -- say, 10-20 -- so we need a 'flat harmonic'
     """
     score = 0
-    for seqpos, nt in canvas.nucleotides.iteritems():
+    for seqpos, nt in canvas.nucleotides.items():
         if seqpos + 1 not in canvas.nucleotides.keys(): continue
         if seqpos + 2 not in canvas.nucleotides.keys(): continue
         a = angle( nt, canvas.nucleotides[seqpos+1], canvas.nucleotides[seqpos+2] )
@@ -288,8 +288,8 @@ def score( canvas ):
     # 1. Chainbreaks for all junction loops.
 
     # 2. Nucleotides should be at least 15 from ALL other nts. Don't double-count.
-    for seqpos1, nt1 in canvas.nucleotides.iteritems():
-        for seqpos2, nt2 in canvas.nucleotides.iteritems():
+    for seqpos1, nt1 in canvas.nucleotides.items():
+        for seqpos2, nt2 in canvas.nucleotides.items():
             if seqpos1 >= seqpos2: continue
             #if distance( nt1, nt2 ) < 15: score += 100
             # Don't do a square root you don't have to
@@ -303,7 +303,7 @@ def score( canvas ):
     #  nt -|- nt  |
     #  |   nt |-- nt
     # so, penalize this ( 'between two bp'ed nts' penalized like hitting a nt )
-    for seqpos, nt in canvas.nucleotides.iteritems():
+    for seqpos, nt in canvas.nucleotides.items():
         for stem in canvas.stems:
             for bp in stem.base_pairs:
                 if nt == bp.nt1 or nt == bp.nt2:
@@ -314,7 +314,7 @@ def score( canvas ):
                     score += 100
 
             # Look at pairs of adjacent nts in stem
-            for seqpos1, nt1 in stem.nucleotides.iteritems():
+            for seqpos1, nt1 in stem.nucleotides.items():
                 if seqpos1 + 1 in stem.nucleotides.keys():
                     nt2 = stem.nucleotides[ seqpos1 + 1 ]
                     if nt.y > nt1.y and nt.y < nt2.y \

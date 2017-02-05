@@ -12,7 +12,7 @@ class Loop(object):
         self.sequence = sequence
         self.numbers = numbers
 
-        self.nucleotides = { numbers[i]: Nucleotide( sequence[i], numbers[i] ) for i in xrange(len(sequence)) }
+        self.nucleotides = { numbers[i]: Nucleotide( sequence[i], numbers[i] ) for i in range(len(sequence)) }
         # Debugging: at one point loops were going out of order.
         #for loop_idx, loop_nt in enumerate(self.nucleotides.keys()):
         #    print "foo!", loop_idx, loop_nt
@@ -32,7 +32,7 @@ class Loop(object):
         
         # Right now, set internal coordinates. First nt of every loop will seem 
         # like a ref right now, but the canvas can connect things up as needed.
-        for seqpos, nt in self.nucleotides.iteritems():
+        for seqpos, nt in self.nucleotides.items():
             if seqpos == min( numbers ): continue # min(numbers) stays None, 0, 0
             
             nt.ref_nt = self.nucleotides[ seqpos-1 ]
