@@ -14,7 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 #import secstruct_svgs
 from secstruct_svgs.stem import Stem
 from secstruct_svgs.loop import Loop
-from secstruct_svgs.canvas import Canvas
+from secstruct_svgs.canvas import Canvas, svg_render
 from secstruct_svgs.util import get_stems, flatten, consecutive_segments, seq_for, score #, distance, distance_squared, angle, closer_than, flat_harmonic_penalty, harmonic_penalty
 import numpy as np
 
@@ -347,7 +347,7 @@ def main():
     #canvas = mc_loops(canvas)
     #canvas = mc(canvas)
     
-    svg_render()
+    svg_render(canvas)
 
 if __name__=="__main__":
     main()

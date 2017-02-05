@@ -95,7 +95,7 @@ class Canvas(object):
             for bp in stem.base_pairs:
                 print("(%f, %f) -- (%f, %f)" % (bp.nt1.x, bp.nt1.y, bp.nt2.x, bp.nt2.y))
 
-    def add_apical_loop( self, loop ):
+    def add_apical_loop(self, loop):
         """
         y offsets don't make a ton of sense here.
         """
@@ -363,7 +363,7 @@ def svg_render(canvas):
 
         # numbers if multiple of 5
         # TODO: adjust size
-        if nt.seqpos % 5 == 0: self.draw_text( nt.seqpos, (nt.x-15, nt.y+5), color(nt.name) )
+        if nt.seqpos % 5 == 0: draw_text(canvas, nt.seqpos, (nt.x-15, nt.y+5), color(nt.name))
 
     def draw_bp(canvas, bp1, bp2):
         """
@@ -389,12 +389,12 @@ def svg_render(canvas):
 
         #self.draw_line( (bp1.x + 10, bp1.y - self.font_height_offset), 
         #                (bp1.x + 25, bp1.y - self.font_height_offset) )
-        self.draw_line( beg, end )
+        draw_line(canvas, beg, end)
 
     def draw_stem(canvas, stem):
         # draw basepairs
-        for bp in canvas.base_pairs: 
-            draw_bp(bp.nt1, bp.nt2)
+        for bp in stem.base_pairs: 
+            draw_bp(canvas, bp.nt1, bp.nt2)
 
     def draw_apical_loop(canvas, apical_loop):
         for loop_nt in apical_loop.nucleotides.values():
@@ -429,14 +429,13 @@ def svg_render(canvas):
 
         draw_line(canvas, beg, end, 'gray')
 
-    for stem in canvas.stems: canvas.draw_stem(stem)
-        for apical in [loop for loop in canvas.loops if loop.apical]:
-            draw_apical_loop(canvas, apical)
-        for junction in [loop for loop in canvas.loops if not loop.apical]:
-            draw_junction_loop(canvas, junction)
-
-        for seqpos in canvas.nucleotides.keys():
-            if seqpos + 1 in canvas.nucleotides.keys():
-                draw_sequence_line(canvas.nucleotides[seqpos], canvas.nucleotides[seqpos + 1])
-
-        canvas.dwg.save()
+    for stem in canvas.stems: draw_stem(canvas, stem)
+    for apical in [loop for loop in canvas.loops if loop.apical]:
+        draw_apical_loop(canvas, apical)
+    for junction in [loop for loop in canvas.loops if not loop.apical]:
+        draw_junction_loop(canvas, junction)
+    for seqpos in canvas.nucleotides.keys():
+        if seqpos + 1 in canvas.nucleotides.keys():
+            draw_sequence_line(canvas, canvas.nucleotides[seqpos], canvas.nucleotides[seqpos + 1])
+    
+    canvas.dwg.save()
