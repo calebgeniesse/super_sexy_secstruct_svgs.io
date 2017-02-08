@@ -1,6 +1,7 @@
 import svgwrite
 from util import color, loop_interpolate, interpolate
 from coordinate_frame import CoordinateFrame
+from graphics import *
 
 class Canvas:
 	def __init__( self, dwg, width_per_stem=80, width_per_bp=30, height_per_bp=20, orig=None):
@@ -360,3 +361,73 @@ class Canvas:
 				self.draw_sequence_line( seqpos, seqpos + 1 )
 
 		self.dwg.save()
+
+	def draw_nt_with_graphics( self, nt, win ):
+		import graphics
+		
+		label = Text(Point(nt.x,nt.y), nt.name)
+		label.setFill(color(nt.name))
+		label.draw(win)
+
+		# numbers if multiple of 5
+		# TODO: adjust size
+		if nt.seqpos % 5 == 0:
+			num = Text(Point(nt.x-15,nt.y+5), nt.name)
+			num.setFill(color(nt.name))
+			num.draw(win)
+	
+	def draw_bp_with_graphics( self, bp1, bp2, win ):
+		"""
+		Needs some kind of line centering relative to the height of the characters.
+		"""
+		self.draw_nt_with_graphics( bp1 )
+		self.draw_nt_with_graphics( bp2 )
+		# Assumed horizontal. Don't have a good idea of how to figure out this line otherwise.
+		# Probably draw about 80% of (x1,y1)-(x2,y2)
+		
+		center1 = [bp1.x,bp1.y]
+		center2 = [bp2.x,bp2.y]
+		
+		# Aim is 80%
+		frac = 0.8
+		f1 = ( 1.0 + frac ) / 2
+		f2 = ( 1.0 - frac ) / 2
+
+		#beg = [ f1 * center1[0] + f2 * center2[0], f1 * center1[1] + f2 * center2[1] ]
+		#end = [ f2 * center1[0] + f1 * center2[0], f2 * center1[1] + f1 * center2[1] ]
+		beg = [ center1[0] + f1*(center2[0]-center1[0]), center1[1] + f1*(center2[1]-center1[1]) ]
+		end = [ center1[0] + f2*(center2[0]-center1[0]), center1[1] + f2*(center2[1]-center1[1]) ]
+
+		line = Line( Point(beg[0],beg[1]), Point(end[0],end[1]) )
+		line.draw(win)
+
+	def draw_stem_with_graphics( stem, win ):
+		x_offset = stem.coordinate_frame.position.x
+		y = stem.coordinate_frame.position.y
+		for bp_idx, bp in enumerate(stem.base_pairs): 
+			# need to compute some offet? ...
+			print "orientation is ", stem.coordinate_frame.orientation
+			y_offset = bp_idx * self.bp_offset_height * stem.coordinate_frame.orientation
+			
+			self.draw_bp_with_graphics( bp.nt1, bp.nt2, win )
+	
+	def draw_apical_loop_with_graphics( apical, win ):
+		pass
+	def draw_junction_loop_with_graphics( junction, win ):
+		pass
+	def draw_sequence_line_with_graphics( p1, p2, win ):
+		pass	
+
+	def draw_with_graphics( self ):
+		win = GraphWin()
+		for stem in self.stems: self.draw_stem_with_graphics( stem, win )
+		for apical in [ loop for loop in self.loops if loop.apical ]:
+			self.draw_apical_loop_with_graphics( apical, win )
+		for junction in [ loop for loop in self.loops if not loop.apical ]:
+			self.draw_junction_loop_with_graphics( junction, win )
+
+		for seqpos in self.nucleotides.keys():
+			if seqpos + 1 in self.nucleotides.keys():
+				self.draw_sequence_line_with_graphics( seqpos, seqpos + 1, win )
+
+		

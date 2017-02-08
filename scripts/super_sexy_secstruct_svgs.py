@@ -337,6 +337,7 @@ def mc( canvas ):
 	"""
 	cycles = 1#000
 	for x in xrange(cycles):
+		canvas.draw_with_graphics()
 		old_score = score(canvas)
 		new_canvas = perturb(canvas)
 		new_score = score(new_canvas)
