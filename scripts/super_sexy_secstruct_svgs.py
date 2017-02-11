@@ -15,7 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from secstruct_svgs.stem import Stem
 from secstruct_svgs.loop import Loop
 from secstruct_svgs.canvas import Canvas, svg_render
-from secstruct_svgs.util import get_stems, flatten, consecutive_segments, seq_for, score #, distance, distance_squared, angle, closer_than, flat_harmonic_penalty, harmonic_penalty
+from secstruct_svgs.util import get_stems, flatten, consecutive_segments, seq_for, score, color #, distance, distance_squared, angle, closer_than, flat_harmonic_penalty, harmonic_penalty
 import numpy as np
 
 import svgwrite
@@ -289,6 +289,98 @@ def mc( canvas ):
             print("All-phase cycle %d: Rejected perturbation from %f to %f." % (x, old_score, new_score))
     return canvas
 
+
+
+def tk_render(canvas, tk_canvas):
+    def draw_text(tk_canvas, text, loc, color):
+        tk_canvas.create_text(text, position=loc, fill=color)
+
+    def draw_line(tk_canvas, loc1, loc2, stroke=svgwrite.rgb(10, 10, 16, '%')):
+        tk_canvas.create_line(loc1[0], loc1[1], loc2[0], loc2[1])#, stroke=stroke)
+
+    def draw_nt(tk_canvas, nt):
+        draw_text(tk_canvas, nt.name, (nt.x, nt.y), color(nt.name))
+
+        # numbers if multiple of 5
+        # TODO: adjust size
+        if nt.seqpos % 5 == 0: draw_text(tk_canvas, nt.seqpos, (nt.x-15, nt.y+5), color(nt.name))
+
+    def draw_bp(tk_canvas, bp1, bp2):
+        """
+        Needs some kind of line centering relative to the height of the characters.
+        """
+        draw_nt(tk_canvas, bp1)
+        draw_nt(tk_canvas, bp2)
+        # Assumed horizontal. Don't have a good idea of how to figure out this line otherwise.
+        # Probably draw about 80% of (x1,y1)-(x2,y2)
+
+        center1 = [bp1.x,bp1.y]
+        center2 = [bp2.x,bp2.y]
+
+        # Aim is 80%
+        frac = 0.8
+        f1 = ( 1.0 + frac ) / 2
+        f2 = ( 1.0 - frac ) / 2
+
+        #beg = [ f1 * center1[0] + f2 * center2[0], f1 * center1[1] + f2 * center2[1] ]
+        #end = [ f2 * center1[0] + f1 * center2[0], f2 * center1[1] + f1 * center2[1] ]
+        beg = [ center1[0] + f1*(center2[0]-center1[0]), center1[1] + f1*(center2[1]-center1[1]) ]
+        end = [ center1[0] + f2*(center2[0]-center1[0]), center1[1] + f2*(center2[1]-center1[1]) ]
+
+        #self.draw_line( (bp1.x + 10, bp1.y - self.font_height_offset), 
+        #                (bp1.x + 25, bp1.y - self.font_height_offset) )
+        draw_line(tk_canvas, beg, end)
+
+    def draw_stem(tk_canvas, stem):
+        # draw basepairs
+        for bp in stem.base_pairs: 
+            draw_bp(tk_canvas, bp.nt1, bp.nt2)
+
+    def draw_apical_loop(tk_canvas, apical_loop):
+        for loop_nt in apical_loop.nucleotides.values():
+            draw_nt(tk_canvas, loop_nt)
+
+    def draw_junction_loop(tk_canvas, junction_loop):
+        for loop_nt in junction_loop.nucleotides.values():
+            draw_nt(tk_canvas, loop_nt)
+
+    def draw_sequence_line(tk_canvas, nt1, nt2):
+        """
+        Draw a line between consecutive nucleotides. Thin and grey. 
+        Figure out where the subjective centers of the nts are ( depends on font but likely about 
+        5-6 px up and right of (x,y) ) and draw about 80% of that vector.
+        """
+
+        center1 = [nt1.x + canvas.font_height_offset, nt1.y - canvas.font_height_offset]
+        center2 = [nt2.x + canvas.font_height_offset, nt2.y - canvas.font_height_offset]
+
+        #beg = [ 0.9 * center1[0] + 0.1 * center2[0], 0.9 * center1[1] + 0.1 * center2[1] ]
+        #end = [ 0.1 * center1[0] + 0.9 * center2[0], 0.1 * center1[1] + 0.9 * center2[1] ]
+
+        # Aim is 60%
+        frac = 0.5
+        f1 = ( 1.0 + frac ) / 2
+        f2 = ( 1.0 - frac ) / 2
+
+        #beg = [ f1 * center1[0] + f2 * center2[0], f1 * center1[1] + f2 * center2[1] ]
+        #end = [ f2 * center1[0] + f1 * center2[0], f2 * center1[1] + f1 * center2[1] ]
+        beg = [ center1[0] + f1*(center2[0]-center1[0]), center1[1] + f1*(center2[1]-center1[1]) ]
+        end = [ center1[0] + f2*(center2[0]-center1[0]), center1[1] + f2*(center2[1]-center1[1]) ]
+
+        draw_line(tk_canvas, beg, end, 'gray')
+
+    for stem in canvas.stems: draw_stem(canvas, stem)
+    for apical in [loop for loop in canvas.loops if loop.apical]:
+        draw_apical_loop(tk_canvas, apical)
+    for junction in [loop for loop in canvas.loops if not loop.apical]:
+        draw_junction_loop(tk_canvas, junction)
+    for seqpos in canvas.nucleotides.keys():
+        if seqpos + 1 in canvas.nucleotides.keys():
+            draw_sequence_line(tk_canvas, canvas.nucleotides[seqpos], canvas.nucleotides[seqpos + 1])
+    
+    canvas.dwg.save()
+
+
 def main():
 
 
@@ -336,23 +428,36 @@ def main():
     # are calculated after addition time.
     for loop in loops: canvas.add_loop(loop)
 
+    def void_mc(canvas): canvas = mc(canvas)
+    def void_mc_loops(canvas): canvas = mc_loops(canvas)
+
     import tkinter
     from tkinter import Button
+    from tkinter import Canvas as tkCanvas
     window = tkinter.Tk()
-    window.mainloop()
-    do_prepack = Button(window)
-
-
     # Big moves that don't require subtlety. For example: what's the best-scoring stem coaxiality?
     # (given a particular list of coaxialities)
-    canvas = prepack(canvas)
-    
+    do_prepack = Button(window, text="Do prepack", command=lambda: prepack(canvas))
+    do_prepack.pack()
+    do_render = Button(window, text="Render to file", command=lambda: svg_render(canvas))
+    do_render.pack()
+    do_mc_loops = Button(window, text="Monte Carlo loops", command=lambda: void_mc_loops(canvas))
+    do_mc_loops.pack()
+    do_mc = Button(window, text="Monte Carlo overall", command=lambda: void_mc(canvas))
+    do_mc.pack()
+    tk_canvas = tkCanvas(window, width=500, height=500)
+    tk_render(canvas, tk_canvas)
+    tk_canvas.create_line(0, 0, 500, 500)
+    tk_canvas.pack()
+
+    window.mainloop()
+
     # Maybe a relaxation phase where we only move loops -- and move
     # them in some sort of sensible synchrony -- is in order.
     #canvas = mc_loops(canvas)
     #canvas = mc(canvas)
     
-    svg_render(canvas)
+    #svg_render(canvas)
 
 if __name__=="__main__":
     main()
